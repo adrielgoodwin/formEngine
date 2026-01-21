@@ -1,0 +1,54 @@
+{
+  "id": "intake_v1",
+  "title": "Client Intake",
+  "schemaVersion": 1,
+
+  "nodes": {
+    "first_name": {
+      "type": "textInput",
+      "label": "First Name"
+    },
+    "age": {
+      "type": "textInput",
+      "label": "Age"
+    },
+    "new_input": {
+      "type": "textInput",
+      "label": "New Input"
+    },
+    "newsletter": {
+      "type": "choiceInput",
+      "label": "Subscribe to newsletter",
+      "choiceLabels": ["Yes", "No"],
+      "choiceCardinality": "single"
+    }
+  },
+
+  "blocks": [
+    {
+      "id": "personal",
+      "title": "Personal Information",
+      "formNodes": ["first_name", "age"]
+    },
+    {
+      "id": "preferences",
+      "title": "Preferences",
+      "formNodes": ["newsletter"]
+    }
+  ],
+
+  "dataSpecs": {
+    "first_name": {
+      "kind": "string",
+      "required": true
+    },
+    "age": {
+      "kind": "number",
+      "required": true
+    },
+    "newsletter": {
+      "kind": "boolean",
+      "required": false
+    }
+  }
+}

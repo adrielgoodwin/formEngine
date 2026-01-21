@@ -1,0 +1,568 @@
+import 'dart:typed_data';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+import '../models/case_record.dart';
+import '../models/form_definition.dart';
+import '../models/form_instance.dart';
+import '../models/form_node.dart';
+import '../models/group_instance.dart';
+import '../models/layout_item.dart';
+
+// =============================================================================
+// FieldEntry: Represents a single field for PDF layout
+// =============================================================================
+
+class FieldEntry {
+  final String label;
+  final String value;
+  final double weight; // 0.0–1.0, from widthFraction
+  final bool preferFullWidth;
+
+  const FieldEntry({
+    required this.label,
+    required this.value,
+    required this.weight,
+    this.preferFullWidth = false,
+  });
+}
+
+// =============================================================================
+// SectionEntry: Represents a section header or group instance header
+// =============================================================================
+
+sealed class PdfElement {}
+
+class PdfSectionHeader extends PdfElement {
+  final String title;
+  final int level; // 1 = block, 2 = group/subsection
+  PdfSectionHeader(this.title, {this.level = 1});
+}
+
+class PdfFieldRow extends PdfElement {
+  final List<FieldEntry> entries;
+  PdfFieldRow(this.entries);
+}
+
+class PdfDivider extends PdfElement {}
+
+class PdfSpacer extends PdfElement {
+  final double height;
+  PdfSpacer([this.height = 8]);
+}
+
+// =============================================================================
+// Main PDF Builder
+// =============================================================================
+
+Future<Uint8List> buildCasePdf(CaseRecord record, FormDefinition def) async {
+  final pdf = pw.Document();
+  final instance = record.formInstance;
+
+  final elements = _buildPdfElements(def, instance);
+
+  pdf.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.letter,
+      margin: const pw.EdgeInsets.all(40),
+      build: (context) => [
+        pw.Header(
+          level: 0,
+          child: pw.Text(
+            record.title,
+            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'Generated: ${_formatDateTime(DateTime.now())}',
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+        ),
+        pw.Divider(thickness: 0.5),
+        pw.SizedBox(height: 8),
+        ...elements.map(_renderPdfElement),
+      ],
+    ),
+  );
+
+  return pdf.save();
+}
+
+// =============================================================================
+// Build PDF Elements from Form Structure
+// =============================================================================
+
+List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
+  final elements = <PdfElement>[];
+
+  for (final block in def.blocks) {
+    elements.add(PdfSectionHeader(block.title, level: 1));
+    elements.addAll(_extractElementsFromLayout(
+      [block.layout],
+      def,
+      instance,
+      instance.values,
+    ));
+    elements.add(PdfSpacer(12));
+  }
+
+  return elements;
+}
+
+List<PdfElement> _extractElementsFromLayout(
+  List<LayoutItem> items,
+  FormDefinition def,
+  FormInstance instance,
+  Map<String, Object?> scopeValues,
+) {
+  final fieldEntries = <FieldEntry>[];
+  final elements = <PdfElement>[];
+
+  void flushFields() {
+    if (fieldEntries.isNotEmpty) {
+      elements.addAll(_packFieldsIntoRows(fieldEntries));
+      fieldEntries.clear();
+    }
+  }
+
+  for (final item in items) {
+    if (item.visibilityCondition != null &&
+        !item.visibilityCondition!.evaluate(scopeValues)) {
+      continue;
+    }
+
+    switch (item) {
+      case LayoutNodeRef():
+        final entry = _createFieldEntry(item, def, scopeValues);
+        if (entry != null) fieldEntries.add(entry);
+
+      case LayoutRow():
+        // Collect fields from row children
+        for (final child in item.children) {
+          if (child.visibilityCondition != null &&
+              !child.visibilityCondition!.evaluate(scopeValues)) {
+            continue;
+          }
+          if (child is LayoutNodeRef) {
+            final entry = _createFieldEntry(child, def, scopeValues);
+            if (entry != null) fieldEntries.add(entry);
+          } else if (child is LayoutColumn) {
+            // Recurse into nested columns
+            for (final subChild in child.children) {
+              if (subChild is LayoutNodeRef) {
+                final entry = _createFieldEntry(subChild, def, scopeValues);
+                if (entry != null) fieldEntries.add(entry);
+              }
+            }
+          }
+        }
+
+      case LayoutColumn():
+        elements.addAll(_extractElementsFromLayout(
+          item.children,
+          def,
+          instance,
+          scopeValues,
+        ));
+
+      case LayoutGroup():
+        flushFields();
+        if (item.groupId != null) {
+          final groupDef = def.groups[item.groupId];
+          if (groupDef != null && groupDef.repeatable) {
+            final instances = instance.getGroupInstances(item.groupId!);
+            for (var i = 0; i < instances.length; i++) {
+              final groupInstance = instances[i];
+              if (i > 0) elements.add(PdfDivider());
+              elements.add(PdfSectionHeader('${groupDef.label} ${i + 1}', level: 2));
+              elements.addAll(_extractGroupInstanceElements(
+                groupDef.children,
+                def,
+                instance,
+                groupInstance,
+              ));
+            }
+          } else if (groupDef != null) {
+            final instances = instance.getGroupInstances(item.groupId!);
+            if (instances.isNotEmpty) {
+              elements.addAll(_extractGroupInstanceElements(
+                groupDef.children,
+                def,
+                instance,
+                instances.first,
+              ));
+            }
+          }
+        } else {
+          if (item.label.isNotEmpty) {
+            elements.add(PdfSectionHeader(item.label, level: 2));
+          }
+          elements.addAll(_extractElementsFromLayout(
+            item.children,
+            def,
+            instance,
+            scopeValues,
+          ));
+        }
+    }
+  }
+
+  flushFields();
+  return elements;
+}
+
+List<PdfElement> _extractGroupInstanceElements(
+  List<LayoutItem> items,
+  FormDefinition def,
+  FormInstance instance,
+  GroupInstance groupInstance,
+) {
+  final scopeValues = {...instance.values, ...groupInstance.values};
+  final fieldEntries = <FieldEntry>[];
+  final elements = <PdfElement>[];
+
+  void flushFields() {
+    if (fieldEntries.isNotEmpty) {
+      elements.addAll(_packFieldsIntoRows(fieldEntries));
+      fieldEntries.clear();
+    }
+  }
+
+  for (final item in items) {
+    if (item.visibilityCondition != null &&
+        !item.visibilityCondition!.evaluate(scopeValues)) {
+      continue;
+    }
+
+    switch (item) {
+      case LayoutNodeRef():
+        final value = groupInstance.values[item.nodeId] ?? instance.values[item.nodeId];
+        final entry = _createFieldEntryFromValue(item, value, def);
+        if (entry != null) fieldEntries.add(entry);
+
+      case LayoutRow():
+        for (final child in item.children) {
+          if (child.visibilityCondition != null &&
+              !child.visibilityCondition!.evaluate(scopeValues)) {
+            continue;
+          }
+          if (child is LayoutNodeRef) {
+            final value = groupInstance.values[child.nodeId] ?? instance.values[child.nodeId];
+            final entry = _createFieldEntryFromValue(child, value, def);
+            if (entry != null) fieldEntries.add(entry);
+          } else if (child is LayoutColumn) {
+            for (final subChild in child.children) {
+              if (subChild is LayoutNodeRef) {
+                final value = groupInstance.values[subChild.nodeId] ?? instance.values[subChild.nodeId];
+                final entry = _createFieldEntryFromValue(subChild, value, def);
+                if (entry != null) fieldEntries.add(entry);
+              }
+            }
+          }
+        }
+
+      case LayoutColumn():
+        elements.addAll(_extractGroupInstanceElements(
+          item.children,
+          def,
+          instance,
+          groupInstance,
+        ));
+
+      case LayoutGroup():
+        flushFields();
+        if (item.label.isNotEmpty) {
+          elements.add(PdfSectionHeader(item.label, level: 2));
+        }
+        elements.addAll(_extractGroupInstanceElements(
+          item.children,
+          def,
+          instance,
+          groupInstance,
+        ));
+    }
+  }
+
+  flushFields();
+  return elements;
+}
+
+// =============================================================================
+// Field Entry Creation
+// =============================================================================
+
+FieldEntry? _createFieldEntry(
+  LayoutNodeRef nodeRef,
+  FormDefinition def,
+  Map<String, Object?> scopeValues,
+) {
+  final value = scopeValues[nodeRef.nodeId];
+  return _createFieldEntryFromValue(nodeRef, value, def);
+}
+
+FieldEntry? _createFieldEntryFromValue(
+  LayoutNodeRef nodeRef,
+  Object? value,
+  FormDefinition def,
+) {
+  final node = def.nodes[nodeRef.nodeId];
+  if (node == null) return null;
+
+  final dataSpec = def.dataSpecs[nodeRef.nodeId];
+  final displayValue = _formatValue(value, node, dataSpec);
+
+  // Omit empty fields for compactness
+  if (displayValue == null || displayValue.isEmpty) return null;
+
+  // Determine if field prefers full width based on content length or type
+  final preferFullWidth = _shouldPreferFullWidth(displayValue, nodeRef.widthFraction, dataSpec);
+
+  return FieldEntry(
+    label: node.label,
+    value: displayValue,
+    weight: nodeRef.widthFraction,
+    preferFullWidth: preferFullWidth,
+  );
+}
+
+bool _shouldPreferFullWidth(String value, double widthFraction, DataSpec? dataSpec) {
+  // Full width if explicitly set to 1.0
+  if (widthFraction >= 0.9) return true;
+  // Full width for long text (addresses, notes)
+  if (value.length > 60) return true;
+  // Full width for multi-line content
+  if (value.contains('\n')) return true;
+  return false;
+}
+
+// =============================================================================
+// Row Packing Algorithm
+// =============================================================================
+
+List<PdfFieldRow> _packFieldsIntoRows(List<FieldEntry> entries) {
+  final rows = <PdfFieldRow>[];
+  var currentRow = <FieldEntry>[];
+  var currentWeight = 0.0;
+
+  for (final entry in entries) {
+    if (entry.preferFullWidth) {
+      // Flush current row first
+      if (currentRow.isNotEmpty) {
+        rows.add(PdfFieldRow(List.from(currentRow)));
+        currentRow.clear();
+        currentWeight = 0.0;
+      }
+      // Add full-width entry as its own row
+      rows.add(PdfFieldRow([entry]));
+    } else if (currentWeight + entry.weight > 1.05) {
+      // Would overflow; start new row
+      if (currentRow.isNotEmpty) {
+        rows.add(PdfFieldRow(List.from(currentRow)));
+        currentRow.clear();
+        currentWeight = 0.0;
+      }
+      currentRow.add(entry);
+      currentWeight = entry.weight;
+    } else {
+      // Fits in current row
+      currentRow.add(entry);
+      currentWeight += entry.weight;
+    }
+  }
+
+  // Flush remaining
+  if (currentRow.isNotEmpty) {
+    rows.add(PdfFieldRow(currentRow));
+  }
+
+  return rows;
+}
+
+// =============================================================================
+// PDF Element Rendering
+// =============================================================================
+
+pw.Widget _renderPdfElement(PdfElement element) {
+  switch (element) {
+    case PdfSectionHeader():
+      return pw.Container(
+        margin: pw.EdgeInsets.only(
+          top: element.level == 1 ? 8 : 6,
+          bottom: element.level == 1 ? 4 : 2,
+        ),
+        child: pw.Text(
+          element.title,
+          style: pw.TextStyle(
+            fontSize: element.level == 1 ? 13 : 10,
+            fontWeight: pw.FontWeight.bold,
+            color: element.level == 1 ? PdfColors.black : PdfColors.grey800,
+          ),
+        ),
+      );
+
+    case PdfFieldRow():
+      return _renderFieldRow(element.entries);
+
+    case PdfDivider():
+      return pw.Container(
+        margin: const pw.EdgeInsets.symmetric(vertical: 4),
+        child: pw.Divider(thickness: 0.3, color: PdfColors.grey400),
+      );
+
+    case PdfSpacer():
+      return pw.SizedBox(height: element.height);
+  }
+}
+
+pw.Widget _renderFieldRow(List<FieldEntry> entries) {
+  if (entries.length == 1 && entries.first.preferFullWidth) {
+    // Full-width field
+    return pw.Container(
+      margin: const pw.EdgeInsets.symmetric(vertical: 1.5),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            entries.first.label,
+            style: pw.TextStyle(
+              fontSize: 8,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.grey700,
+            ),
+          ),
+          pw.SizedBox(height: 1),
+          pw.Text(
+            entries.first.value,
+            style: const pw.TextStyle(fontSize: 9),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Multi-column row
+  final totalWeight = entries.fold(0.0, (sum, e) => sum + e.weight);
+
+  return pw.Container(
+    margin: const pw.EdgeInsets.symmetric(vertical: 1.5),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: entries.asMap().entries.map((mapEntry) {
+        final index = mapEntry.key;
+        final entry = mapEntry.value;
+        // Normalize flex to make row fill width
+        final flex = ((entry.weight / totalWeight) * 100).round();
+
+        return pw.Expanded(
+          flex: flex,
+          child: pw.Container(
+            padding: pw.EdgeInsets.only(right: index < entries.length - 1 ? 8 : 0),
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: '${entry.label}: ',
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                  pw.TextSpan(
+                    text: entry.value,
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    ),
+  );
+}
+
+String? _formatValue(Object? value, FormNode node, DataSpec? dataSpec) {
+  if (value == null) return null;
+
+  switch (node) {
+    case TextInputNode():
+      final profile = dataSpec?.profile ?? ValueProfile.plainText;
+      return _formatTextValue(value, profile);
+
+    case ChoiceInputNode():
+      if (value is List<bool>) {
+        final selected = <String>[];
+        for (var i = 0; i < value.length && i < node.choiceLabels.length; i++) {
+          if (value[i]) selected.add(node.choiceLabels[i]);
+        }
+        return selected.isEmpty ? null : selected.join(', ');
+      }
+      return null;
+  }
+}
+
+String? _formatTextValue(Object? value, ValueProfile profile) {
+  if (value == null) return null;
+
+  switch (profile) {
+    case ValueProfile.moneyCents:
+      if (value is int) {
+        final dollars = value ~/ 100;
+        final cents = value % 100;
+        final formatted = '\$${_formatWithCommas(dollars)}.${cents.toString().padLeft(2, '0')}';
+        return formatted;
+      }
+      return value.toString();
+
+    case ValueProfile.dateDdMmYyyy:
+      return value.toString();
+
+    case ValueProfile.sinCanada:
+      final digits = value.toString().replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 9) {
+        return '${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6, 9)}';
+      }
+      return value.toString();
+
+    case ValueProfile.phoneNorthAmerica:
+      final digits = value.toString().replaceAll(RegExp(r'\D'), '');
+      if (digits.length == 10) {
+        return '(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6, 10)}';
+      }
+      return value.toString();
+
+    case ValueProfile.plainText:
+      final str = value.toString();
+      return str.isEmpty ? null : str;
+  }
+}
+
+String _formatWithCommas(int number) {
+  final str = number.toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < str.length; i++) {
+    if (i > 0 && (str.length - i) % 3 == 0) {
+      buffer.write(',');
+    }
+    buffer.write(str[i]);
+  }
+  return buffer.toString();
+}
+
+String _formatDateTime(DateTime dt) {
+  final day = dt.day.toString().padLeft(2, '0');
+  final month = dt.month.toString().padLeft(2, '0');
+  final year = dt.year;
+  final hour = dt.hour.toString().padLeft(2, '0');
+  final minute = dt.minute.toString().padLeft(2, '0');
+  return '$day/$month/$year $hour:$minute';
+}
+
+Future<void> previewCasePdf(CaseRecord record, FormDefinition def) async {
+  await Printing.layoutPdf(
+    onLayout: (format) => buildCasePdf(record, def),
+    name: '${record.title}.pdf',
+  );
+}
