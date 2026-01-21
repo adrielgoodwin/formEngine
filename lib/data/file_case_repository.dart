@@ -1,31 +1,24 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
 import '../logging/app_logger.dart';
 import '../logging/log_level.dart';
 import '../models/case_record.dart';
 import '../models/form_definition.dart';
 import '../models/form_instance.dart';
 import 'case_repository.dart';
+import 'repository_exceptions.dart';
 
-class FileLockException implements Exception {
-  final String message;
-  final String filePath;
+/// Result of directory creation attempt
+class _DirectoryResult {
+  final bool success;
+  final String path;
+  final String? error;
 
-  FileLockException(this.message, this.filePath);
-
-  @override
-  String toString() => 'FileLockException: $message (file: $filePath)';
-}
-
-class CaseDirectoryNotFoundException implements Exception {
-  final String directoryPath;
-
-  CaseDirectoryNotFoundException(this.directoryPath);
-
-  @override
-  String toString() =>
-      'CaseDirectoryNotFoundException: Directory does not exist: $directoryPath';
+  _DirectoryResult({required this.success, required this.path, this.error});
 }
 
 class FileCaseRepository extends CaseRepository {
@@ -34,28 +27,124 @@ class FileCaseRepository extends CaseRepository {
   final String _basePath;
   final AppLogger _logger = AppLogger.instance;
 
-  FileCaseRepository({String? basePath}) : _basePath = basePath ?? _defaultBasePath {
-    final dir = Directory(_basePath);
-    final exists = dir.existsSync();
+  FileCaseRepository._internal(this._basePath) {
     _safeLog(
       LogLevel.info,
       'repo',
-      'FileCaseRepository init basePath=$_basePath exists=$exists',
+      'FileCaseRepository initialized with basePath=$_basePath',
     );
+  }
 
-    if (!exists) {
-      _safeLog(
-        LogLevel.error,
+  /// Factory constructor that ensures the directory exists or creates it.
+  /// Falls back to user-local directory if primary path fails.
+  static Future<FileCaseRepository> create({String? basePath}) async {
+    final primaryPath = basePath ?? _defaultBasePath;
+    
+    // Try primary path first
+    final result = await _ensureDirectoryExists(primaryPath);
+    if (result.success) {
+      return FileCaseRepository._internal(result.path);
+    }
+
+    // Fallback to user-local directory
+    final fallbackPath = await _getFallbackPath();
+    final fallbackResult = await _ensureDirectoryExists(fallbackPath);
+    
+    if (fallbackResult.success) {
+      AppLogger.instance.warn(
         'repo',
-        'Case directory missing at $_basePath',
+        'Using fallback directory: $fallbackPath (primary failed: ${result.error})',
       );
-      throw CaseDirectoryNotFoundException(_basePath);
+      return FileCaseRepository._internal(fallbackResult.path);
+    }
+
+    // Both failed - throw descriptive exception
+    throw CaseDirectoryNotFoundException(
+      'Failed to create case directory. '
+      'Primary path "$primaryPath" failed: ${result.error}. '
+      'Fallback path "$fallbackPath" failed: ${fallbackResult.error}',
+    );
+  }
+
+  /// Synchronous constructor for testing or when directory is guaranteed to exist.
+  factory FileCaseRepository({String? basePath}) {
+    final path = basePath ?? _defaultBasePath;
+    final dir = Directory(path);
+    if (!dir.existsSync()) {
+      throw CaseDirectoryNotFoundException(
+        'Directory does not exist: $path. Use FileCaseRepository.create() instead.',
+      );
+    }
+    return FileCaseRepository._internal(path);
+  }
+
+  static Future<_DirectoryResult> _ensureDirectoryExists(String path) async {
+    try {
+      final dir = Directory(path);
+      final exists = dir.existsSync();
+      
+      AppLogger.instance.info(
+        'repo',
+        'Checking directory: path=$path exists=$exists',
+      );
+
+      if (!exists) {
+        AppLogger.instance.info(
+          'repo',
+          'Creating directory recursively: $path',
+        );
+        await dir.create(recursive: true);
+        AppLogger.instance.info(
+          'repo',
+          'Directory created successfully: $path',
+        );
+      }
+
+      return _DirectoryResult(success: true, path: path);
+    } catch (e, st) {
+      AppLogger.instance.error(
+        'repo',
+        'Failed to create directory: $path',
+        error: e,
+        stackTrace: st,
+      );
+      return _DirectoryResult(success: false, path: path, error: e.toString());
     }
   }
 
-  String _filePathForId(String id) => '$_basePath\\$id.json';
-  String _tempFilePathForId(String id) => '$_basePath\\$id.json.tmp';
-  String _lockFilePathForId(String id) => '$_basePath\\$id.lock';
+  static Future<String> _getFallbackPath() async {
+    try {
+      // Use getApplicationSupportDirectory for cross-platform support
+      final appSupportDir = await getApplicationSupportDirectory();
+      final fallbackPath = p.join(appSupportDir.path, 'YourApp', 'cases');
+      
+      AppLogger.instance.info(
+        'repo',
+        'Computed fallback path: $fallbackPath',
+      );
+      
+      return fallbackPath;
+    } catch (e) {
+      // Ultimate fallback if path_provider fails
+      final homePath = Platform.environment['USERPROFILE'] ?? 
+                       Platform.environment['HOME'] ?? 
+                       Platform.environment['LOCALAPPDATA'] ?? 
+                       'C:\\temp';
+      final fallbackPath = p.join(homePath, 'YourApp', 'cases');
+      
+      AppLogger.instance.warn(
+        'repo',
+        'path_provider failed, using environment-based fallback: $fallbackPath',
+        error: e,
+      );
+      
+      return fallbackPath;
+    }
+  }
+
+  String _filePathForId(String id) => p.join(_basePath, '$id.json');
+  String _tempFilePathForId(String id) => p.join(_basePath, '$id.json.tmp');
+  String _lockFilePathForId(String id) => p.join(_basePath, '$id.lock');
 
   @override
   List<CaseRecord> getAll({bool includeArchived = false}) {

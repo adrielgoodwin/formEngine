@@ -43,3 +43,33 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Platform builds
+windows/flutter/ephemeral/
+windows/build/
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / runtime data
+*.log
+ProgramData/
+cases/
+logs/
+
+# Secrets (just in case)
+.env

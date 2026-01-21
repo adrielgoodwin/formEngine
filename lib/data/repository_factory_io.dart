@@ -4,9 +4,10 @@ import 'case_repository.dart';
 import 'file_case_repository.dart';
 
 /// Creates FileCaseRepository on Windows, InMemoryCaseRepository otherwise.
-CaseRepository createPlatformRepository() {
+/// This is an async wrapper that ensures directory creation.
+Future<CaseRepository> createPlatformRepository() async {
   if (Platform.isWindows) {
-    return FileCaseRepository();
+    return await FileCaseRepository.create();
   }
   return InMemoryCaseRepository();
 }

@@ -39,11 +39,10 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       final formDef = await loadFormDefinition();
-      final repo = createRepository();
+      final repo = await createRepository();
 
-      if (repo is InMemoryCaseRepository) {
-        await seedDemoCases(formDef, repo);
-      }
+      // Seed demo cases for any repository type (works for both InMemory and File)
+      await seedDemoCasesIfEmpty(formDef, repo);
 
       runApp(
         MultiProvider(

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/case_repository.dart';
+import '../demo_seed.dart';
 import '../models/case_record.dart';
 import '../report/case_report_pdf.dart';
 import '../state/form_state.dart';
@@ -54,6 +56,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: const Icon(Icons.copy),
               tooltip: 'Copy Recent Logs',
               onPressed: _copyRecentLogs,
+            ),
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Seed Demo Cases',
+              onPressed: _seedDemoCases,
             ),
           TextButton.icon(
             onPressed: () async {
@@ -209,6 +217,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           duration: Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  Future<void> _seedDemoCases() async {
+    final repository = context.read<CaseRepository>();
+    final formState = context.read<FormStateProvider>();
+
+    try {
+      final def = await formState.loadDefinition();
+      await seedDemoCasesIfEmpty(def, repository, force: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Seeded demo cases')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Seed failed')),
+        );
+      }
     }
   }
 

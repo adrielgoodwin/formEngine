@@ -5,4 +5,4 @@ import 'repository_factory_stub.dart'
     if (dart.library.io) 'repository_factory_io.dart';
 
 /// Creates the appropriate CaseRepository for the current platform.
-CaseRepository createRepository() => createPlatformRepository();
+Future<CaseRepository> createRepository() => createPlatformRepository();
