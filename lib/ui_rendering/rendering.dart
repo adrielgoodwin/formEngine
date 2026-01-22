@@ -309,7 +309,8 @@ Widget renderTextInput(
   String? groupId,
   String? instanceId,
 }) {
-  final formState = context.watch<FormStateProvider>();
+  // Use read() for one-time access to avoid rebuilding on every state change
+  final formState = context.read<FormStateProvider>();
   final controller = formState.controllerFor(
     nodeId: node.id,
     groupId: groupId,
@@ -319,7 +320,11 @@ Widget renderTextInput(
   final profile = dataSpec.profile;
   final formatting = formattingFor(profile);
   final fieldKey = FieldKey(node.id, groupId, instanceId);
-  final errorText = formState.errorFor(fieldKey);
+  
+  // Only watch the specific error for this field using Selector
+  final errorText = context.select<FormStateProvider, String?>(
+    (state) => state.errorFor(fieldKey)
+  );
 
   // Ensure initial text uses the same formatting as live input.
   final initialText = controller.text;
@@ -436,20 +441,16 @@ Widget renderTextInput(
 
 Widget renderChoiceInput(ChoiceInputNode node, BuildContext context,
     {String? groupId, String? instanceId}) {
-  final instance = context.watch<FormStateProvider>().formInstance;
+  // Use select to only rebuild when this specific field's value changes
+  final currentValue = context.select<FormStateProvider, dynamic>(
+    (state) => groupId != null && instanceId != null
+        ? state.formInstance.getGroupValue(groupId, instanceId, node.id)
+        : state.formInstance.getValue(node.id)
+  );
 
-  final List<bool> values = () {
-    if (groupId != null && instanceId != null) {
-      return List<bool>.from(
-        instance.getGroupValue<List<bool>>(groupId, instanceId, node.id) ??
-            List<bool>.filled(node.choiceLabels.length, false),
-      );
-    }
-    return List<bool>.from(
-      instance.getValue<List<bool>>(node.id) ??
-          List<bool>.filled(node.choiceLabels.length, false),
-    );
-  }();
+  final List<bool> values = List<bool>.from(
+    currentValue ?? List<bool>.filled(node.choiceLabels.length, false),
+  );
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
