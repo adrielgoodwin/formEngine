@@ -26,6 +26,10 @@ class FileCaseRepository extends CaseRepository {
 
   final String _basePath;
   final AppLogger _logger = AppLogger.instance;
+  
+  // In-memory cache to avoid repeated disk scans
+  List<CaseRecord>? _cachedCases;
+  bool _cacheInitialized = false;
 
   FileCaseRepository._internal(this._basePath) {
     _safeLog(
@@ -146,8 +150,34 @@ class FileCaseRepository extends CaseRepository {
   String _tempFilePathForId(String id) => p.join(_basePath, '$id.json.tmp');
   String _lockFilePathForId(String id) => p.join(_basePath, '$id.lock');
 
+  /// Whether the cache has been initialized via refreshCache().
+  bool get isCacheInitialized => _cacheInitialized;
+
   @override
   List<CaseRecord> getAll({bool includeArchived = false}) {
+    // IMPORTANT: getAll() NEVER performs disk IO.
+    // Cache must be initialized at startup via refreshCache().
+    // If cache is not initialized, return empty list (fail-safe).
+    if (!_cacheInitialized || _cachedCases == null) {
+      _safeLog(
+        LogLevel.warn,
+        'repo',
+        'getAll called before cache initialized - returning empty list',
+      );
+      return const [];
+    }
+
+    // Return unmodifiable copy filtered by archive status
+    if (includeArchived) {
+      return List.unmodifiable(_cachedCases!);
+    }
+    return List.unmodifiable(_cachedCases!.where((c) => !c.isArchived));
+  }
+
+  /// Refreshes the cache by scanning the directory asynchronously.
+  /// Use this for explicit refresh or recovery scenarios.
+  Future<void> refreshCache() async {
+    _logger.info('repo', 'Refreshing cache from disk');
     final dir = Directory(_basePath);
     final List<CaseRecord> results = [];
 
@@ -155,16 +185,14 @@ class FileCaseRepository extends CaseRepository {
     int parsedOk = 0;
     int malformed = 0;
 
-    for (final entity in dir.listSync()) {
+    await for (final entity in dir.list()) {
       if (entity is File && entity.path.endsWith('.json') && !entity.path.endsWith('.tmp')) {
         totalFiles++;
         try {
-          final content = entity.readAsStringSync();
+          final content = await entity.readAsString();
           final json = jsonDecode(content) as Map<String, dynamic>;
           final record = CaseRecord.fromJson(json);
-          if (includeArchived || !record.isArchived) {
-            results.add(record);
-          }
+          results.add(record);
           parsedOk++;
         } catch (e, st) {
           malformed++;
@@ -183,18 +211,34 @@ class FileCaseRepository extends CaseRepository {
     _safeLog(
       LogLevel.info,
       'repo',
-      'Loaded cases: totalFiles=$totalFiles parsedOk=$parsedOk malformed=$malformed includeArchived=$includeArchived',
+      'Cache refreshed: totalFiles=$totalFiles parsedOk=$parsedOk malformed=$malformed',
     );
 
     results.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return results;
+    _cachedCases = results;
+    _cacheInitialized = true;
+    notifyListeners();
   }
 
   @override
   CaseRecord? getById(String id) {
+    // CACHE-FIRST: Check cache before disk to avoid sync IO
+    if (_cacheInitialized && _cachedCases != null) {
+      for (final c in _cachedCases!) {
+        if (c.id == id) {
+          _safeLog(LogLevel.debug, 'repo', 'Cache hit for id=$id');
+          return c;
+        }
+      }
+      // Cache initialized but ID not found - it doesn't exist
+      _safeLog(LogLevel.debug, 'repo', 'Cache miss for id=$id (not on disk)');
+      return null;
+    }
+
+    // Fallback to disk only if cache not initialized (rare recovery path)
+    _safeLog(LogLevel.warn, 'repo', 'getById disk fallback for id=$id (cache not initialized)');
     final file = File(_filePathForId(id));
     if (!file.existsSync()) {
-      _safeLog(LogLevel.info, 'repo', 'Case miss id=$id');
       return null;
     }
 
@@ -202,7 +246,6 @@ class FileCaseRepository extends CaseRepository {
       final content = file.readAsStringSync();
       final json = jsonDecode(content) as Map<String, dynamic>;
       final record = CaseRecord.fromJson(json);
-      _safeLog(LogLevel.info, 'repo', 'Case hit id=$id');
       return record;
     } catch (e, st) {
       _safeLog(
@@ -231,6 +274,13 @@ class FileCaseRepository extends CaseRepository {
       'repo',
       'Created case id=${record.id} updatedAt=${record.updatedAt.toUtc().toIso8601String()}',
     );
+    
+    // Update cache: remove any existing entry (prevent duplicates), insert at front
+    if (_cacheInitialized && _cachedCases != null) {
+      _cachedCases!.removeWhere((c) => c.id == record.id);
+      _cachedCases!.insert(0, record);
+    }
+    
     notifyListeners();
     return record;
   }
@@ -244,23 +294,43 @@ class FileCaseRepository extends CaseRepository {
       'repo',
       'Updated case id=${record.id} updatedAt=${record.updatedAt.toUtc().toIso8601String()}',
     );
+    
+    // Update cache: remove old entry, add updated record, re-sort
+    if (_cacheInitialized && _cachedCases != null) {
+      _cachedCases!.removeWhere((c) => c.id == record.id);
+      _cachedCases!.add(record);
+      _cachedCases!.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    }
+    
     notifyListeners();
   }
 
   @override
   void archive(String id, bool archived) {
+    // Use cache-first lookup (getById checks cache first)
     final record = getById(id);
-    if (record != null) {
-      record.isArchived = archived;
-      record.touch();
-      _writeRecordWithLock(record);
-      _safeLog(
-        LogLevel.info,
-        'repo',
-        'Archived state change for id=$id archived=$archived updatedAt=${record.updatedAt.toUtc().toIso8601String()}',
-      );
-      notifyListeners();
+    if (record == null) {
+      _safeLog(LogLevel.warn, 'repo', 'Archive failed: case not found id=$id');
+      return;
     }
+    
+    record.isArchived = archived;
+    record.touch();
+    _writeRecordWithLock(record);
+    _safeLog(
+      LogLevel.info,
+      'repo',
+      'Archived state change for id=$id archived=$archived',
+    );
+    
+    // Update cache: remove old entry, add updated record, re-sort
+    if (_cacheInitialized && _cachedCases != null) {
+      _cachedCases!.removeWhere((c) => c.id == id);
+      _cachedCases!.add(record);
+      _cachedCases!.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    }
+    
+    notifyListeners();
   }
 
   void _writeRecordWithLock(CaseRecord record) {

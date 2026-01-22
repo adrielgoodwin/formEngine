@@ -20,6 +20,8 @@ class FormStateProvider extends ChangeNotifier {
   Timer? _saveTimer;
   bool _isDisposed = false;
   bool _savePendingLogged = false;
+  bool _saveInFlight = false;
+  bool _saveQueuedAfterInflight = false;
 
   AssembledForm? _assembledForm;
   FormDefinition? _formDefinition;
@@ -120,6 +122,16 @@ class FormStateProvider extends ChangeNotifier {
     final caseToSave = _currentCase;
     if (caseToSave == null) return;
 
+    // Coalesce saves: if one is in-flight, queue one more after it completes
+    if (_saveInFlight) {
+      if (!_saveQueuedAfterInflight) {
+        _saveQueuedAfterInflight = true;
+        _safeLog('state', 'Persist coalesced (in-flight) for case ${caseToSave.id}');
+      }
+      return;
+    }
+
+    _saveInFlight = true;
     _safeLog('state', 'Persist start for case ${caseToSave.id}');
     try {
       _repository.update(caseToSave);
@@ -131,6 +143,14 @@ class FormStateProvider extends ChangeNotifier {
       } else {
         _safeLogError('state', 'Persist failed for case ${caseToSave.id}', error: e, stackTrace: st);
       }
+    } finally {
+      _saveInFlight = false;
+      
+      // If a save was queued while we were in-flight, run it now
+      if (_saveQueuedAfterInflight) {
+        _saveQueuedAfterInflight = false;
+        _persistCurrentCase(force: force);
+      }
     }
   }
 
@@ -139,7 +159,8 @@ class FormStateProvider extends ChangeNotifier {
     _saveTimer?.cancel();
     _saveTimer = null;
     _savePendingLogged = false;
-    _persistCurrentCase(force: true);
+    // Don't force if already in-flight, let coalescing handle it
+    _persistCurrentCase(force: !_saveInFlight);
   }
 
   @override

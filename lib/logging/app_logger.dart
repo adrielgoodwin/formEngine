@@ -29,7 +29,7 @@ class AppLogger {
 
   AppLogger._({
     required List<LogSink> sinks,
-    this.minLevel = LogLevel.debug,
+    this.minLevel = LogLevel.info,
   }) : _sinks = sinks;
 
   /// Returns the singleton logger instance.
@@ -47,11 +47,15 @@ class AppLogger {
       FileLogSink(),
     ];
 
-    return AppLogger._(sinks: sinks);
+    // Check compile-time flag for debug logs
+    const debugLogsEnabled = bool.fromEnvironment('FORMENGINE_DEBUG_LOGS', defaultValue: false);
+    final minLevel = debugLogsEnabled ? LogLevel.debug : LogLevel.info;
+
+    return AppLogger._(sinks: sinks, minLevel: minLevel);
   }
 
   /// Creates a logger with custom sinks (for testing or dependency injection).
-  factory AppLogger.withSinks(List<LogSink> sinks, {LogLevel minLevel = LogLevel.debug}) {
+  factory AppLogger.withSinks(List<LogSink> sinks, {LogLevel minLevel = LogLevel.info}) {
     return AppLogger._(sinks: sinks, minLevel: minLevel);
   }
 
