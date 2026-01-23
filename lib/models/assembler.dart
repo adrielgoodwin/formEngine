@@ -1,4 +1,5 @@
 import 'form_definition.dart';
+import 'form_block.dart';
 import 'form_node.dart';
 import 'layout_item.dart';
 import 'visibility_condition.dart';
@@ -68,11 +69,13 @@ class AssembledBlock {
   final String id;
   final String title;
   final AssembledLayout layout;
+  final FormBlock formBlock;
 
   AssembledBlock({
     required this.id,
     required this.title,
     required this.layout,
+    required this.formBlock,
   });
 }
 
@@ -145,6 +148,7 @@ AssembledForm assembleForm(FormDefinition definition) {
         definition.dataSpecs,
         definition.groups,
       ),
+      formBlock: block,
     );
   }).toList();
 

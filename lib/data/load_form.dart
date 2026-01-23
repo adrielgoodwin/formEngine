@@ -850,6 +850,8 @@ Future<FormDefinition> loadFormDefinition() async {
       FormBlock(
         id: 'block_deceased_information',
         title: 'Deceased Information',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.deceased,
         layout: LayoutColumn(
           id: 'deceased_information_root',
           children: [
@@ -931,6 +933,8 @@ Future<FormDefinition> loadFormDefinition() async {
       FormBlock(
         id: 'block_executor_estate_trustee_information',
         title: 'Executor / Estate Trustee Information',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.executor,
         layout: LayoutColumn(
           id: 'executor_root',
           children: [
@@ -947,6 +951,8 @@ Future<FormDefinition> loadFormDefinition() async {
       FormBlock(
         id: 'block_other_professionals',
         title: 'Other Professionals',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.professional,
         layout: LayoutColumn(
           id: 'other_professionals_root',
           children: [
@@ -1054,6 +1060,8 @@ Future<FormDefinition> loadFormDefinition() async {
       FormBlock(
         id: 'block_things_to_retrieve',
         title: 'Things to Retrieve',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.receive,
         layout: LayoutColumn(
           id: 'things_to_retrieve_root',
           children: [
@@ -1088,6 +1096,8 @@ Future<FormDefinition> loadFormDefinition() async {
       FormBlock(
         id: 'block_asset_details',
         title: 'Asset Details',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.asset,
         layout: LayoutColumn(
           id: 'asset_details_root',
           children: [
@@ -1133,6 +1143,8 @@ Future<FormDefinition> loadFormDefinition() async {
       FormBlock(
         id: 'block_other_documents',
         title: 'Other Documents',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.documents,
         layout: LayoutColumn(
           id: 'other_documents_root',
           children: [

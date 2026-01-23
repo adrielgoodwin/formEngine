@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/form_controllers.dart';
-import '../state/form_state.dart';
-import '../models/form_node.dart';
+import '../data/case_repository.dart';
+import '../data/load_form.dart';
+import '../logging/app_logger.dart';
 import '../models/assembler.dart';
+import '../models/form_block.dart';
+import '../models/form_instance.dart';
+import '../models/form_node.dart';
+import '../models/form_definition_validation.dart';
 import '../models/group_instance.dart';
+import '../state/form_state.dart';
 
 /// =======================
 /// FORM ENTRY POINT
@@ -31,22 +37,61 @@ Widget renderForm(AssembledForm form, BuildContext context) {
 
 Widget renderBlock(AssembledBlock block, BuildContext context) {
   final isAssets = block.id == 'block_asset_details';
+  final formBlock = block.formBlock;
+  
+  // Create border styling based on block configuration
+  BorderSide? leftBorder;
+  BorderSide? otherBorders;
+  
+  switch (formBlock.borderStyle) {
+    case BlockBorderStyle.leftHeavy:
+      leftBorder = BorderSide(color: formBlock.getPrimaryColor(), width: 4);
+      otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
+      break;
+    case BlockBorderStyle.allLight:
+      leftBorder = BorderSide(color: formBlock.getLightColor(), width: 1);
+      otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
+      break;
+    case BlockBorderStyle.leftHeavyAllLight:
+      leftBorder = BorderSide(color: formBlock.getPrimaryColor(), width: 4);
+      otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
+      break;
+    case BlockBorderStyle.none:
+        leftBorder = null;
+        otherBorders = null;
+  }
 
   return Card(
     elevation: 2,
     margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(block.title, style: const TextStyle(fontSize: 18)),
-          const SizedBox(height: 12),
-          isAssets
-              ? _renderAssetBlockLayout(block.layout, context)
-              : renderLayout(block.layout, context),
-        ],
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+      side: otherBorders ?? BorderSide.none,
+    ),
+    child: Container(
+      decoration: leftBorder != null
+          ? BoxDecoration(
+              border: Border(
+                left: leftBorder,
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                bottomLeft: Radius.circular(8),
+              ),
+            )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(block.title, style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 12),
+            isAssets
+                ? _renderAssetBlockLayout(block.layout, context)
+                : renderLayout(block.layout, context),
+          ],
+        ),
       ),
     ),
   );
