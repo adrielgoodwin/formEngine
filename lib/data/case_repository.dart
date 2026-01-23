@@ -8,6 +8,7 @@ abstract class CaseRepository extends ChangeNotifier {
   CaseRecord createNew(FormDefinition def);
   void update(CaseRecord record);
   void archive(String id, bool archived);
+  void delete(String id);
   CaseRecord? getById(String id);
 }
 
@@ -50,6 +51,12 @@ class InMemoryCaseRepository extends CaseRepository {
       record.touch();
       notifyListeners();
     }
+  }
+
+  @override
+  void delete(String id) {
+    _cases.remove(id);
+    notifyListeners();
   }
 
   @override

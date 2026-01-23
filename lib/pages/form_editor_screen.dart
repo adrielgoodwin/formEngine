@@ -23,9 +23,12 @@ class FormEditorScreen extends StatelessWidget {
             // Update case before leaving
             if (currentCase != null) {
               // Derive title from name field
-              final nameValue = _deriveTitleFromInstance(formState.formInstance);
-              if (nameValue != null) {
-                currentCase.title = nameValue;
+              final formInstance = formState.formInstance;
+              if (formInstance != null) {
+                final nameValue = _deriveTitleFromInstance(formInstance);
+                if (nameValue != null) {
+                  currentCase.title = nameValue;
+                }
               }
               repository.update(currentCase);
             }
@@ -39,9 +42,12 @@ class FormEditorScreen extends StatelessWidget {
               icon: const Icon(Icons.save),
               onPressed: () {
                 // Derive title from name field
-                final nameValue = _deriveTitleFromInstance(formState.formInstance);
-                if (nameValue != null) {
-                  currentCase.title = nameValue;
+                final formInstance = formState.formInstance;
+                if (formInstance != null) {
+                  final nameValue = _deriveTitleFromInstance(formInstance);
+                  if (nameValue != null) {
+                    currentCase.title = nameValue;
+                  }
                 }
                 repository.update(currentCase);
                 ScaffoldMessenger.of(context).showSnackBar(

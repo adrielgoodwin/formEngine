@@ -332,6 +332,35 @@ class FileCaseRepository extends CaseRepository {
     notifyListeners();
   }
 
+  @override
+  void delete(String id) {
+    // Use cache-first lookup (getById checks cache first)
+    final record = getById(id);
+    if (record == null) {
+      _safeLog(LogLevel.warn, 'repo', 'Delete failed: case not found id=$id');
+      return;
+    }
+    
+    // Delete the case file
+    try {
+      final caseFile = File(_filePathForId(id));
+      if (caseFile.existsSync()) {
+        caseFile.deleteSync();
+        _safeLog(LogLevel.info, 'repo', 'Deleted case file for id=$id');
+      }
+      
+      // Remove from cache
+      if (_cacheInitialized && _cachedCases != null) {
+        _cachedCases!.removeWhere((c) => c.id == id);
+      }
+      
+      notifyListeners();
+      _safeLog(LogLevel.info, 'repo', 'Case deleted successfully id=$id');
+    } catch (e, st) {
+      _safeLog(LogLevel.error, 'repo', 'Failed to delete case file id=$id', error: e, stackTrace: st);
+    }
+  }
+
   void _writeRecordWithLock(CaseRecord record) {
     final id = record.id;
     final lockFile = File(_lockFilePathForId(id));

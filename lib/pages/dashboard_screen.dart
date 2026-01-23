@@ -37,7 +37,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final repository = context.watch<CaseRepository>();
     final formState = context.read<FormStateProvider>();
-    final cases = repository.getAll(includeArchived: _showArchived);
+    final cases = _showArchived 
+        ? repository.getAll(includeArchived: true).where((c) => c.isArchived).toList()
+        : repository.getAll(includeArchived: false);
     final filteredCases = cases.where((c) =>
         c.title.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
 
@@ -158,6 +160,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       : 'Archive',
                                 ),
                               ),
+                              // Only show delete button for archived cases
+                              if (caseRecord.isArchived)
+                                _DeletableCaseButton(
+                                  caseRecord: caseRecord,
+                                  repository: repository,
+                                ),
                             ],
                           ),
                         ),
@@ -255,6 +263,112 @@ class _DashboardScreenState extends State<DashboardScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Deletable Case Button Widget
+// =============================================================================
+
+class _DeletableCaseButton extends StatefulWidget {
+  final CaseRecord caseRecord;
+  final CaseRepository repository;
+
+  const _DeletableCaseButton({
+    required this.caseRecord,
+    required this.repository,
+  });
+
+  @override
+  State<_DeletableCaseButton> createState() => _DeletableCaseButtonState();
+}
+
+class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
+  bool isHovered = false;
+  bool isConfirming = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      child: GestureDetector(
+        onTap: () {
+          if (isConfirming) {
+            _deleteCase();
+          } else {
+            setState(() => isConfirming = true);
+            // Auto-reset confirmation after 3 seconds
+            Future.delayed(const Duration(seconds: 3), () {
+              if (context.mounted) {
+                setState(() => isConfirming = false);
+              }
+            });
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: isConfirming ? 32 : 24,
+          height: isConfirming ? 32 : 24,
+          decoration: BoxDecoration(
+            color: isConfirming 
+                ? const Color.fromARGB(255, 172, 52, 43)
+                : Colors.grey[300],
+            borderRadius: BorderRadius.circular(isConfirming ? 16 : 12),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.delete_forever,
+              size: isConfirming ? 20 : 16,
+              color: isConfirming 
+                  ? Colors.black 
+                  : (isHovered 
+                      ? const Color.fromARGB(255, 172, 52, 43) 
+                      : Colors.black54),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _deleteCase() {
+    // Show confirmation dialog before permanent deletion
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Permanently Delete Case'),
+        content: Text(
+          'Are you sure you want to permanently delete "${widget.caseRecord.title}"?\n\n'
+          'This action cannot be undone and will remove all case data from the server.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              widget.repository.delete(widget.caseRecord.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Case permanently deleted'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete Forever'),
           ),
         ],
       ),

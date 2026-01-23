@@ -133,11 +133,18 @@ Widget _renderLayoutScoped(
   String? instanceId,
 }) {
   final formState = context.watch<FormStateProvider>();
-  final baseValues = formState.formInstance.values;
+  
+  // Guard against null formInstance during navigation
+  final formInstance = formState.formInstance;
+  if (formInstance == null) {
+    return const SizedBox.shrink();
+  }
+  
+  final baseValues = formInstance.values;
   final formValues = (groupId != null && instanceId != null)
       ? {
           ...baseValues,
-          ...formState.formInstance
+          ...formInstance
               .getGroupInstances(groupId)
               .firstWhere(
                 (g) => g.instanceId == instanceId,
@@ -216,10 +223,9 @@ Widget _renderLayoutScoped(
       if (layout.repeatable && layout.groupId != null) {
         final formState = context.watch<FormStateProvider>();
         final def = formState.formDefinition.groups[layout.groupId!];
-        final instances = context
-            .watch<FormStateProvider>()
-            .formInstance
-            .getGroupInstances(layout.groupId!);
+        final formInstance = context.watch<FormStateProvider>().formInstance;
+        if (formInstance == null) return const SizedBox.shrink();
+        final instances = formInstance.getGroupInstances(layout.groupId!);
 
         final addLabel = switch (layout.groupId) {
           'executor_other_info' => 'Add Executor',
@@ -546,9 +552,13 @@ Widget renderChoiceInput(ChoiceInputNode node, BuildContext context,
     {String? groupId, String? instanceId}) {
   // Use select to only rebuild when this specific field's value changes
   final currentValue = context.select<FormStateProvider, dynamic>(
-    (state) => groupId != null && instanceId != null
-        ? state.formInstance.getGroupValue(groupId, instanceId, node.id)
-        : state.formInstance.getValue(node.id)
+    (state) {
+      final formInstance = state.formInstance;
+      if (formInstance == null) return null;
+      return groupId != null && instanceId != null
+          ? formInstance.getGroupValue(groupId, instanceId, node.id)
+          : formInstance.getValue(node.id);
+    }
   );
 
   final List<bool> values = List<bool>.from(

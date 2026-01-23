@@ -35,7 +35,7 @@ class FormStateProvider extends ChangeNotifier {
 
   AssembledForm get assembledForm => _assembledForm!;
   FormDefinition get formDefinition => _formDefinition!;
-  FormInstance get formInstance => _formInstance!;
+  FormInstance? get formInstance => _formInstance;
   FormControllers get controllers => _controllers!;
   CaseRecord? get currentCase => _currentCase;
   bool get isLoading => _isLoading;
