@@ -66,6 +66,14 @@ class ConfigManager {
         'config',
         'Loaded config from $configPath: $config',
       );
+      
+      // Log Windows Server specific path info
+      if (Platform.isWindows) {
+        AppLogger.instance.info(
+          'config', 
+          'Windows Server - Executable: ${Platform.executable}, Config: $configPath, Data: ${config.dataPath}, Log: ${config.logPath}'
+        );
+      }
 
       return config;
     } catch (e, st) {

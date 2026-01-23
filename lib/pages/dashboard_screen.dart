@@ -6,6 +6,7 @@ import '../demo_seed.dart';
 import '../models/case_record.dart';
 import '../report/case_report_pdf.dart';
 import '../state/form_state.dart';
+import '../logging/app_logger.dart';
 import '../utils/log_helper.dart';
 import 'form_editor_screen.dart';
 
@@ -338,6 +339,7 @@ class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
   }
 
   void _deleteCase() {
+    AppLogger.instance.info('dashboard', 'Initiating delete case flow for case=${widget.caseRecord.id}');
     // Show confirmation dialog before permanent deletion
     showDialog(
       context: context,
@@ -355,6 +357,7 @@ class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
+              AppLogger.instance.info('dashboard', 'User confirmed delete case=${widget.caseRecord.id}');
               widget.repository.delete(widget.caseRecord.id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

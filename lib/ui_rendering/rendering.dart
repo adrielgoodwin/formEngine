@@ -137,6 +137,7 @@ Widget _renderLayoutScoped(
   // Guard against null formInstance during navigation
   final formInstance = formState.formInstance;
   if (formInstance == null) {
+    AppLogger.instance.warn('render', 'formInstance is null during render, returning empty widget');
     return const SizedBox.shrink();
   }
   
