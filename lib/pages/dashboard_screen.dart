@@ -63,7 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               tooltip: 'Seed Demo Cases',
               onPressed: _seedDemoCases,
             ),
-          TextButton.icon(
+          ElevatedButton.icon(
             onPressed: () async {
               final def = await formState.loadDefinition();
               final newCase = repository.createNew(def);
@@ -71,10 +71,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _openCase(context, newCase);
               }
             },
-            icon: const Icon(Icons.add, color: Colors.white),
+            icon: const Icon(Icons.add),
             label: const Text(
               'New Case',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Colors.black),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
           ),
           const SizedBox(width: 8),

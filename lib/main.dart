@@ -82,6 +82,7 @@ class MyApp extends StatelessWidget {
       title: 'Form Engine',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const DashboardScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

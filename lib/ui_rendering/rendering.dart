@@ -193,53 +193,16 @@ Widget _renderLayoutScoped(
             ),
             const SizedBox(height: 8),
             ...instances.asMap().entries.map((entry) {
-              final index = entry.key;
               final inst = entry.value;
               final canDelete = def == null
                   ? true
                   : instances.length > def.minInstances;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${layout.label} ${index + 1}',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Delete',
-                          onPressed: canDelete
-                              ? () => context
-                                  .read<FormStateProvider>()
-                                  .removeGroupInstance(
-                                      layout.groupId!, inst.instanceId)
-                              : null,
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ...layout.children.map(
-                      (child) => _renderLayoutScoped(
-                        child,
-                        context,
-                        groupId: layout.groupId,
-                        instanceId: inst.instanceId,
-                      ),
-                    ),
-                  ],
-                ),
+              return _DeletableGroupContainer(
+                layout: layout,
+                inst: inst,
+                canDelete: canDelete,
+                groupId: layout.groupId!,
               );
             }),
             const SizedBox(height: 8),
@@ -296,6 +259,101 @@ Widget renderNode(AssembledNode assembled, BuildContext context,
     ChoiceInputNode n => renderChoiceInput(n, context,
         groupId: groupId, instanceId: instanceId),
   };
+}
+
+/// Widget for a repeatable group container with delete functionality
+class _DeletableGroupContainer extends StatefulWidget {
+  final AssembledGroup layout;
+  final GroupInstance inst;
+  final bool canDelete;
+  final String groupId;
+
+  const _DeletableGroupContainer({
+    required this.layout,
+    required this.inst,
+    required this.canDelete,
+    required this.groupId,
+  });
+
+  @override
+  State<_DeletableGroupContainer> createState() => _DeletableGroupContainerState();
+}
+
+class _DeletableGroupContainerState extends State<_DeletableGroupContainer> {
+  bool isHovered = false;
+  bool isConfirming = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8), // Space for the X button
+              ...widget.layout.children.map(
+                (child) => _renderLayoutScoped(
+                  child,
+                  context,
+                  groupId: widget.groupId,
+                  instanceId: widget.inst.instanceId,
+                ),
+              ),
+            ],
+          ),
+          if (widget.canDelete)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                onEnter: (_) => setState(() => isHovered = true),
+                onExit: (_) => setState(() => isHovered = false),
+                child: GestureDetector(
+                  onTap: () {
+                    if (isConfirming) {
+                      context.read<FormStateProvider>().removeGroupInstance(
+                        widget.groupId, widget.inst.instanceId);
+                    } else {
+                      setState(() => isConfirming = true);
+                      // Auto-reset confirmation after 3 seconds
+                      Future.delayed(const Duration(seconds: 3), () {
+                        if (context.mounted) {
+                          setState(() => isConfirming = false);
+                        }
+                      });
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: isConfirming ? 32 : 24,
+                    height: isConfirming ? 32 : 24,
+                    decoration: BoxDecoration(
+                      color: isConfirming ? const Color.fromARGB(255, 172, 52, 43): Colors.grey[300],
+                      borderRadius: BorderRadius.circular(isConfirming ? 16 : 12),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.close,
+                        size: isConfirming ? 20 : 16,
+                        color: isConfirming ? Colors.black : (isHovered ? const Color.fromARGB(255, 172, 52, 43) : Colors.black54),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// =======================

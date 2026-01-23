@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../config/config_manager.dart';
 import '../logging/app_logger.dart';
 import '../logging/log_level.dart';
 import '../models/case_record.dart';
@@ -22,8 +23,6 @@ class _DirectoryResult {
 }
 
 class FileCaseRepository extends CaseRepository {
-  static const String _defaultBasePath = r'C:\ProgramData\YourApp\cases';
-
   final String _basePath;
   final AppLogger _logger = AppLogger.instance;
   
@@ -42,7 +41,7 @@ class FileCaseRepository extends CaseRepository {
   /// Factory constructor that ensures the directory exists or creates it.
   /// Falls back to user-local directory if primary path fails.
   static Future<FileCaseRepository> create({String? basePath}) async {
-    final primaryPath = basePath ?? _defaultBasePath;
+    final primaryPath = basePath ?? ConfigManager.dataPath;
     
     // Try primary path first
     final result = await _ensureDirectoryExists(primaryPath);
@@ -72,7 +71,7 @@ class FileCaseRepository extends CaseRepository {
 
   /// Synchronous constructor for testing or when directory is guaranteed to exist.
   factory FileCaseRepository({String? basePath}) {
-    final path = basePath ?? _defaultBasePath;
+    final path = basePath ?? ConfigManager.dataPath;
     final dir = Directory(path);
     if (!dir.existsSync()) {
       throw CaseDirectoryNotFoundException(

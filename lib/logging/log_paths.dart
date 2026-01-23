@@ -1,14 +1,14 @@
 import 'dart:io';
 
+import '../config/config_manager.dart';
+
 /// Helper for determining log file paths.
 class LogPaths {
-  static const String windowsBaseDir = r'C:\ProgramData\YourApp\logs';
-
   /// Returns the base log directory for the current platform.
   /// Returns null if file logging is not supported on this platform.
   static String? getLogDirectory() {
     if (Platform.isWindows) {
-      return windowsBaseDir;
+      return ConfigManager.logPath;
     }
     // Mac/Linux: could add ~/Library/Logs or ~/.local/share, but disabled for now
     return null;
