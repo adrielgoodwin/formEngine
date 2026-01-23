@@ -861,7 +861,7 @@ Future<FormDefinition> loadFormDefinition() async {
                 LayoutNodeRef(
                   id: 'deceased_full_name_ref',
                   nodeId: 'deceased_name',
-                  widthFraction: 0.35,
+                  widthFraction: 0.28,  // Reduced from 0.35 to 0.28 (20% reduction)
                 ),
                 LayoutNodeRef(
                   id: 'deceased_dob_ref',
@@ -973,7 +973,7 @@ Future<FormDefinition> loadFormDefinition() async {
                 LayoutNodeRef(
                   id: 'lawyer_name_ref',
                   nodeId: 'lawyer_name',
-                  widthFraction: 1.0,
+                  widthFraction: 0.4,  // Reduced from 1.0 to 0.4
                 ),
                 LayoutRow(
                   id: 'lawyer_row_1',
@@ -1019,7 +1019,7 @@ Future<FormDefinition> loadFormDefinition() async {
                 LayoutNodeRef(
                   id: 'advisor_name_ref',
                   nodeId: 'advisor_name',
-                  widthFraction: 1.0,
+                  widthFraction: 0.4,  // Reduced from 1.0 to 0.4
                 ),
                 LayoutRow(
                   id: 'advisor_row_1',

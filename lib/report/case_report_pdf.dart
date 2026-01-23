@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../models/case_record.dart';
+import '../models/form_block.dart';
 import '../models/form_definition.dart';
 import '../models/form_instance.dart';
 import '../models/form_node.dart';
@@ -37,7 +38,8 @@ sealed class PdfElement {}
 class PdfSectionHeader extends PdfElement {
   final String title;
   final int level; // 1 = block, 2 = group/subsection
-  PdfSectionHeader(this.title, {this.level = 1});
+  final PdfColor? color; // Optional color for block headers
+  PdfSectionHeader(this.title, {this.level = 1, this.color});
 }
 
 class PdfFieldRow extends PdfElement {
@@ -97,7 +99,14 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
   final elements = <PdfElement>[];
 
   for (final block in def.blocks) {
-    elements.add(PdfSectionHeader(block.title, level: 1));
+    // Convert Flutter Color to PDF Color
+    PdfColor? blockColor;
+    if (block.colorScheme != BlockColorScheme.none) {
+      final flutterColor = block.getPrimaryColor();
+      blockColor = PdfColor.fromInt(flutterColor.value);
+    }
+    
+    elements.add(PdfSectionHeader(block.title, level: 1, color: blockColor));
     elements.addAll(_extractElementsFromLayout(
       [block.layout],
       def,
@@ -175,7 +184,7 @@ List<PdfElement> _extractElementsFromLayout(
             for (var i = 0; i < instances.length; i++) {
               final groupInstance = instances[i];
               if (i > 0) elements.add(PdfDivider());
-              elements.add(PdfSectionHeader('${groupDef.label} ${i + 1}', level: 2));
+              // Removed subtitle: '${groupDef.label} ${i + 1}' - no more "Executor 1", "Executor 2", etc.
               elements.addAll(_extractGroupInstanceElements(
                 groupDef.children,
                 def,
@@ -396,7 +405,9 @@ pw.Widget _renderPdfElement(PdfElement element) {
           style: pw.TextStyle(
             fontSize: element.level == 1 ? 13 : 10,
             fontWeight: pw.FontWeight.bold,
-            color: element.level == 1 ? PdfColors.black : PdfColors.grey800,
+            color: element.level == 1 && element.color != null 
+                ? element.color! 
+                : (element.level == 1 ? PdfColors.black : PdfColors.grey800),
           ),
         ),
       );
