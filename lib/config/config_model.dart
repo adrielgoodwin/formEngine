@@ -27,8 +27,8 @@ class AppConfig {
   /// Creates default config with current hardcoded paths
   factory AppConfig.defaultConfig() {
     return const AppConfig(
-      dataPath: r'C:\ProgramData\YourApp\cases',
-      logPath: r'C:\ProgramData\YourApp\logs',
+      dataPath: r'C:\ProgramData\EstateIntake\cases',
+      logPath: r'C:\ProgramData\EstateIntake\logs',
     );
   }
 

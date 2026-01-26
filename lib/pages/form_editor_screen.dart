@@ -36,26 +36,7 @@ class FormEditorScreen extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        actions: [
-          if (currentCase != null)
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: () {
-                // Derive title from name field
-                final formInstance = formState.formInstance;
-                if (formInstance != null) {
-                  final nameValue = _deriveTitleFromInstance(formInstance);
-                  if (nameValue != null) {
-                    currentCase.title = nameValue;
-                  }
-                }
-                repository.update(currentCase);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Saved')),
-                );
-              },
-            ),
-        ],
+        actions: [],
       ),
       body: formState.isLoading
           ? const Center(child: CircularProgressIndicator())

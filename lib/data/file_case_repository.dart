@@ -40,7 +40,7 @@ class FileCaseRepository extends CaseRepository {
   /// Factory constructor that ensures the directory exists or creates it.
   /// Falls back to user-local directory if primary path fails.
   static Future<FileCaseRepository> create({String? basePath}) async {
-    final primaryPath = basePath ?? r'C:\ProgramData\YourApp\cases';
+    final primaryPath = basePath ?? r'C:\ProgramData\EstateIntake\cases';
     
     // Try primary path first
     final result = await _ensureDirectoryExists(primaryPath);
@@ -70,7 +70,7 @@ class FileCaseRepository extends CaseRepository {
 
   /// Synchronous constructor for testing or when directory is guaranteed to exist.
   factory FileCaseRepository({String? basePath}) {
-    final path = basePath ?? r'C:\ProgramData\YourApp\cases';
+    final path = basePath ?? r'C:\ProgramData\EstateIntake\cases';
     final dir = Directory(path);
     if (!dir.existsSync()) {
       throw CaseDirectoryNotFoundException(
@@ -118,7 +118,7 @@ class FileCaseRepository extends CaseRepository {
     try {
       // Use getApplicationSupportDirectory for cross-platform support
       final appSupportDir = await getApplicationSupportDirectory();
-      final fallbackPath = p.join(appSupportDir.path, 'YourApp', 'cases');
+      final fallbackPath = p.join(appSupportDir.path, 'EstateIntake', 'cases');
       
       AppLogger.instance.info(
         'repo',
@@ -132,7 +132,7 @@ class FileCaseRepository extends CaseRepository {
                        Platform.environment['HOME'] ?? 
                        Platform.environment['LOCALAPPDATA'] ?? 
                        'C:\\temp';
-      final fallbackPath = p.join(homePath, 'YourApp', 'cases');
+      final fallbackPath = p.join(homePath, 'EstateIntake', 'cases');
       
       AppLogger.instance.warn(
         'repo',

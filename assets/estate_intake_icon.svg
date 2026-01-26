@@ -1,0 +1,9 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- "estate" text - fills most of the space -->
+  <text x="512" y="420" font-family="Arial, sans-serif" font-size="280" font-weight="bold" 
+        fill="#2196F3" text-anchor="middle" dominant-baseline="middle">estate</text>
+  
+  <!-- "intake" text - fills most of the space -->
+  <text x="512" y="680" font-family="Arial, sans-serif" font-size="280" font-weight="bold" 
+        fill="#1976D2" text-anchor="middle" dominant-baseline="middle">intake</text>
+</svg>

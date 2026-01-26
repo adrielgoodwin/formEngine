@@ -17,14 +17,32 @@ dependencies:
   printing: ^5.13.3
   path_provider: ^2.1.1
   path: ^1.9.0
+  flutter_svg: ^2.0.9
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   build_runner: ^2.10.4
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+  
+  # App icon
+  # Run: flutter pub run flutter_launcher_icons:main
+  # Then rebuild: flutter build windows
+  
   assets:
     - assets/forms/
+    - assets/estate_intake_icon.svg
+    - assets/logo.png
+
+# Flutter Launcher Icons Configuration
+flutter_launcher_icons:
+  android: false
+  ios: false
+  windows:
+    generate: true
+    image_path: "assets/estate_intake_icon.svg"
+    icon_size: 48 # 48x48 for .exe

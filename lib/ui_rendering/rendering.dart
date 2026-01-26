@@ -2,31 +2,127 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/form_controllers.dart';
-import '../data/case_repository.dart';
-import '../data/load_form.dart';
 import '../logging/app_logger.dart';
 import '../models/assembler.dart';
 import '../models/form_block.dart';
-import '../models/form_instance.dart';
 import '../models/form_node.dart';
-import '../models/form_definition_validation.dart';
 import '../models/group_instance.dart';
 import '../state/form_state.dart';
+
+/// Global state manager for block collapse states
+class BlockCollapseState with ChangeNotifier {
+  final Map<String, bool> _collapsedStates = {};
+  
+  bool isCollapsed(String blockId) {
+    return _collapsedStates[blockId] ?? false;
+  }
+  
+  void toggleBlock(String blockId) {
+    _collapsedStates[blockId] = !(_collapsedStates[blockId] ?? false);
+    notifyListeners();
+  }
+  
+  void collapseAll() {
+    for (final blockId in _collapsedStates.keys) {
+      _collapsedStates[blockId] = true;
+    }
+    notifyListeners();
+  }
+  
+  void expandAll() {
+    for (final blockId in _collapsedStates.keys) {
+      _collapsedStates[blockId] = false;
+    }
+    notifyListeners();
+  }
+  
+  void initializeBlocks(List<String> blockIds) {
+    for (final blockId in blockIds) {
+      _collapsedStates.putIfAbsent(blockId, () => false);
+    }
+    notifyListeners();
+  }
+  
+  bool allCollapsed() {
+    return _collapsedStates.values.every((collapsed) => collapsed);
+  }
+  
+  bool allExpanded() {
+    return _collapsedStates.values.every((collapsed) => !collapsed);
+  }
+}
+
+// Global instance
+final _blockCollapseState = BlockCollapseState();
 
 /// =======================
 /// FORM ENTRY POINT
 /// =======================
 
 Widget renderForm(AssembledForm form, BuildContext context) {
-  return SingleChildScrollView(
-    padding: const EdgeInsets.all(12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(form.title, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: 16),
-        ...form.blocks.map((block) => renderBlock(block, context)),
-      ],
+  // Initialize block collapse states
+  final blockIds = form.blocks.map((block) => block.id).toList();
+  _blockCollapseState.initializeBlocks(blockIds);
+  
+  return ChangeNotifierProvider.value(
+    value: _blockCollapseState,
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(form.title, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 16),
+          // Collapse/Expand all button
+          Consumer<BlockCollapseState>(
+            builder: (context, collapseState, child) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (collapseState.allExpanded()) {
+                          collapseState.collapseAll();
+                        } else {
+                          collapseState.expandAll();
+                        }
+                      },
+                      icon: Icon(
+                        collapseState.allExpanded() ? Icons.expand_more : Icons.expand_less,
+                      ),
+                      label: Text(
+                        collapseState.allExpanded() ? 'Collapse' : 'Expand',
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        minimumSize: const Size(120, 36),
+                        fixedSize: const Size(120, 36),
+                        elevation: 2,
+                        shadowColor: Colors.black26,
+                        surfaceTintColor: Colors.transparent,
+                        overlayColor: MaterialStateColor.resolveWith((states) {
+                          if (states.contains(MaterialState.pressed)) {
+                            return Colors.transparent;
+                          }
+                          if (states.contains(MaterialState.hovered)) {
+                            return Colors.black.withOpacity(0.04);
+                          }
+                          return Colors.transparent;
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          ...form.blocks.map((block) => renderBlock(block, context)),
+        ],
+      ),
     ),
   );
 }
@@ -35,66 +131,119 @@ Widget renderForm(AssembledForm form, BuildContext context) {
 /// BLOCK RENDERING
 /// =======================
 
-Widget renderBlock(AssembledBlock block, BuildContext context) {
-  final isAssets = block.id == 'block_asset_details';
-  final formBlock = block.formBlock;
-  
-  // Create border styling based on block configuration
-  BorderSide? leftBorder;
-  BorderSide? otherBorders;
-  
-  switch (formBlock.borderStyle) {
-    case BlockBorderStyle.leftHeavy:
-      leftBorder = BorderSide(color: formBlock.getPrimaryColor(), width: 4);
-      otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
-      break;
-    case BlockBorderStyle.allLight:
-      leftBorder = BorderSide(color: formBlock.getLightColor(), width: 1);
-      otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
-      break;
-    case BlockBorderStyle.leftHeavyAllLight:
-      leftBorder = BorderSide(color: formBlock.getPrimaryColor(), width: 4);
-      otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
-      break;
-    case BlockBorderStyle.none:
-        leftBorder = null;
-        otherBorders = null;
-  }
+class CollapsibleBlock extends StatelessWidget {
+  final AssembledBlock block;
+  final BuildContext context;
 
-  return Card(
-    elevation: 2,
-    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
-      side: otherBorders ?? BorderSide.none,
-    ),
-    child: Container(
-      decoration: leftBorder != null
-          ? BoxDecoration(
-              border: Border(
-                left: leftBorder,
+  const CollapsibleBlock({
+    super.key,
+    required this.block,
+    required this.context,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<BlockCollapseState>(
+      builder: (context, collapseState, child) {
+        final isCollapsed = collapseState.isCollapsed(block.id);
+        final isAssets = block.id == 'block_asset_details';
+        final formBlock = block.formBlock;
+        
+        // Create border styling based on block configuration
+        BorderSide? leftBorder;
+        BorderSide? otherBorders;
+        
+        switch (formBlock.borderStyle) {
+          case BlockBorderStyle.leftHeavy:
+            leftBorder = BorderSide(color: formBlock.getPrimaryColor(), width: 4);
+            otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
+            break;
+          case BlockBorderStyle.allLight:
+            leftBorder = BorderSide(color: formBlock.getLightColor(), width: 1);
+            otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
+            break;
+          case BlockBorderStyle.leftHeavyAllLight:
+            leftBorder = BorderSide(color: formBlock.getPrimaryColor(), width: 4);
+            otherBorders = BorderSide(color: formBlock.getLightColor(), width: 1);
+            break;
+          case BlockBorderStyle.none:
+              leftBorder = null;
+              otherBorders = null;
+        }
+
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: otherBorders ?? BorderSide.none,
+          ),
+          child: Container(
+            decoration: leftBorder != null
+                ? BoxDecoration(
+                    border: Border(
+                      left: leftBorder,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      bottomLeft: Radius.circular(8),
+                    ),
+                  )
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with title and collapse button
+                  Row(
+                    children: [
+                      // Add gravestone icon for deceased information
+                      if (block.id == 'block_deceased_information')
+                        Icon(
+                          Icons.bed,
+                          size: 20,
+                          color: Colors.red,
+                        ),
+                      if (block.id == 'block_deceased_information')
+                        const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          block.title, 
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          isCollapsed ? Icons.expand_more : Icons.expand_less,
+                          color: formBlock.getPrimaryColor(),
+                        ),
+                        onPressed: () {
+                          collapseState.toggleBlock(block.id);
+                        },
+                        tooltip: isCollapsed ? 'Expand' : 'Collapse',
+                      ),
+                    ],
+                  ),
+                  // Content (conditionally shown)
+                  if (!isCollapsed) ...[
+                    const SizedBox(height: 12),
+                    isAssets
+                        ? _renderAssetBlockLayout(block.layout, context)
+                        : renderLayout(block.layout, context),
+                  ],
+                ],
               ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                bottomLeft: Radius.circular(8),
-              ),
-            )
-          : null,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(block.title, style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 12),
-            isAssets
-                ? _renderAssetBlockLayout(block.layout, context)
-                : renderLayout(block.layout, context),
-          ],
-        ),
-      ),
-    ),
-  );
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+Widget renderBlock(AssembledBlock block, BuildContext context) {
+  return CollapsibleBlock(block: block, context: context);
 }
 
 Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context) {
@@ -137,7 +286,7 @@ Widget _renderLayoutScoped(
   // Guard against null formInstance during navigation
   final formInstance = formState.formInstance;
   if (formInstance == null) {
-    AppLogger.instance.warn('render', 'formInstance is null during render, returning empty widget');
+    AppLogger.instance.debug('render', 'formInstance is null during render, returning empty widget');
     return const SizedBox.shrink();
   }
   
@@ -230,21 +379,39 @@ Widget _renderLayoutScoped(
 
         final addLabel = switch (layout.groupId) {
           'executor_other_info' => 'Add Executor',
-          'real_estate_group' => 'Add Real Estate',
+          'realestate_group' => 'Add Real Estate',
+          'asset_group' => 'Add Other Asset',
           'rrsp_account_group' => 'Add RRSP / RIFF Account',
-          'non_registered_account_group' => 'Add Non-Registered Account',
+          'nonreg_account_group' => 'Add Non-Registered Account',
           _ => 'Add more',
         };
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              layout.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...instances.asMap().entries.map((entry) {
+        // Get icon for this group
+        IconData groupIcon;
+        switch (layout.groupId) {
+          case 'executor_other_info':
+            groupIcon = Icons.person;
+            break;
+          case 'rrsp_account_group':
+            groupIcon = Icons.account_balance;
+            break;
+          case 'realestate_group':
+            groupIcon = Icons.home;
+            break;
+          case 'nonreg_account_group':
+            groupIcon = Icons.savings;
+            break;
+          default:
+            // Don't show icon for unknown groups
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  layout.label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...instances.asMap().entries.map((entry) {
               final inst = entry.value;
               final canDelete = def == null
                   ? true
@@ -268,16 +435,131 @@ Widget _renderLayoutScoped(
                       .addGroupInstance(layout.groupId!),
               icon: const Icon(Icons.add),
               label: Text(addLabel),
+              style: TextButton.styleFrom(
+                overlayColor: MaterialStateColor.resolveWith((states) {
+                  if (states.contains(MaterialState.pressed)) {
+                    return Colors.transparent;
+                  }
+                  if (states.contains(MaterialState.hovered)) {
+                    return Colors.black.withOpacity(0.04);
+                  }
+                  return Colors.transparent;
+                }),
+              ),
             ),
           ],
         );
+      }
+
+      // Icon case for known groups
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                groupIcon,
+                size: 20,
+                color: layout.groupId == 'executor_other_info' 
+                    ? const Color(0xFFFF9800)
+                    : const Color(0xFF4CAF50),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                layout.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...instances.asMap().entries.map((entry) {
+            final inst = entry.value;
+            final canDelete = def == null
+                ? true
+                : instances.length > def.minInstances;
+
+            return _DeletableGroupContainer(
+              layout: layout,
+              inst: inst,
+              canDelete: canDelete,
+              groupId: layout.groupId!,
+            );
+          }),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: def != null &&
+                    def.maxInstances != null &&
+                    instances.length >= def.maxInstances!
+                ? null
+                : () => context
+                    .read<FormStateProvider>()
+                    .addGroupInstance(layout.groupId!),
+            icon: const Icon(Icons.add),
+            label: Text(addLabel),
+            style: TextButton.styleFrom(
+              overlayColor: MaterialStateColor.resolveWith((states) {
+                if (states.contains(MaterialState.pressed)) {
+                  return Colors.transparent;
+                }
+                if (states.contains(MaterialState.hovered)) {
+                  return Colors.black.withOpacity(0.04);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+        ],
+      );
       } else {
+        // Get icon for this group
+        IconData? groupIcon;
+        switch (layout.groupId) {
+          case 'executor_other_info':
+            groupIcon = Icons.person;
+            break;
+          case 'rrsp_account_group':
+            groupIcon = Icons.account_balance;
+            break;
+          case 'realestate_group':
+            groupIcon = Icons.home;
+            break;
+          case 'nonreg_account_group':
+            groupIcon = Icons.savings;
+            break;
+          default:
+            // Don't show icon for unknown groups
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  layout.label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...layout.children.map((child) => _renderLayoutScoped(child, context,
+                    groupId: groupId, instanceId: instanceId)),
+              ],
+            );
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              layout.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(
+                  groupIcon,
+                  size: 20,
+                  color: layout.groupId == 'executor_other_info' 
+                      ? const Color(0xFFFF9800)
+                      : const Color(0xFF4CAF50),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  layout.label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             ...layout.children.map((child) => _renderLayoutScoped(child, context,
@@ -562,9 +844,21 @@ Widget renderChoiceInput(ChoiceInputNode node, BuildContext context,
     }
   );
 
-  final List<bool> values = List<bool>.from(
-    currentValue ?? List<bool>.filled(node.choiceLabels.length, false),
-  );
+  // Safely create values list with proper bounds checking
+  final List<bool> values;
+  if (currentValue is List<bool>) {
+    // Log potential data inconsistency for debugging
+    if (currentValue.length != node.choiceLabels.length) {
+      AppLogger.instance.warn('render', 'Choice input data inconsistency: values.length=${currentValue.length}, choiceLabels.length=${node.choiceLabels.length}, nodeId=${node.id}');
+    }
+    
+    values = List<bool>.filled(node.choiceLabels.length, false);
+    for (int i = 0; i < currentValue.length && i < node.choiceLabels.length; i++) {
+      values[i] = currentValue[i];
+    }
+  } else {
+    values = List<bool>.filled(node.choiceLabels.length, false);
+  }
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,

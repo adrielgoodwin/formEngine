@@ -130,17 +130,10 @@ class PhoneNanpFormatter extends TextInputFormatter {
     final line = capped.length > 6 ? capped.substring(6) : '';
 
     final buf = StringBuffer();
-    buf.write('(');
     buf.write(area);
 
-    if (capped.length >= 3) {
-      buf.write(')');
-    }
-
     if (prefix.isNotEmpty) {
-      if (capped.length >= 3) {
-        buf.write(' ');
-      }
+      buf.write('-');
       buf.write(prefix);
     }
 

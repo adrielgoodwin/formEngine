@@ -7,7 +7,9 @@ import '../models/case_record.dart';
 import '../report/case_report_pdf.dart';
 import '../state/form_state.dart';
 import '../logging/app_logger.dart';
+import '../models/sort_option.dart';
 import '../utils/log_helper.dart';
+import 'dashboard_helper.dart';
 import 'form_editor_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -19,7 +21,117 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _showArchived = false;
+  SortOption _currentSort = SortOption.newestUpdated;
   late TextEditingController _searchController;
+
+  /// Creates executor info and asset indicators for the case
+  Widget _buildCaseIndicators(CaseRecord caseRecord) {
+    final formInstance = caseRecord.formInstance;
+
+    // Get executor instances for left side
+    final executorInstances = formInstance.getGroupInstances('executor_other_info');
+
+    // Count asset items for right side
+    final rrspCount = formInstance.getGroupInstances('rrsp_account_group').length;
+    final realEstateCount = formInstance.getGroupInstances('realestate_group').length;
+    final nonRegCount = formInstance.getGroupInstances('nonreg_account_group').length;
+    final otherAssetCount = formInstance.getGroupInstances('other_asset_group').length;
+
+    // Build executor widgets (left side)
+    final executorWidgets = <Widget>[];
+    for (int index = 0; index < executorInstances.length; index++) {
+      final executor = executorInstances[index];
+      final name = (executor.values['executor_name'] ?? '').toString();
+      final contact = (executor.values['executor_contact'] ?? '').toString();
+
+      executorWidgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          margin: EdgeInsets.only(right: index < executorInstances.length - 1 ? 8 : 0),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF9800).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.person,
+                size: 20,
+                color: Color(0xFFFF9800),
+              ),
+              const SizedBox(width: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFFF9800),
+                    ),
+                  ),
+                  if (contact.isNotEmpty)
+                    Text(
+                      contact,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Build asset icons (right side)
+    final assetWidgets = <Widget>[];
+    if (rrspCount > 0) {
+      assetWidgets.addAll(List.generate(rrspCount, (index) => const Padding(
+        padding: EdgeInsets.only(right: 2),
+        child: Icon(Icons.account_balance, size: 20, color: Color(0xFF4CAF50)),
+      )));
+    }
+    if (realEstateCount > 0) {
+      assetWidgets.addAll(List.generate(realEstateCount, (index) => const Padding(
+        padding: EdgeInsets.only(right: 2),
+        child: Icon(Icons.home, size: 20, color: Color(0xFF4CAF50)),
+      )));
+    }
+    if (nonRegCount > 0) {
+      assetWidgets.addAll(List.generate(nonRegCount, (index) => const Padding(
+        padding: EdgeInsets.only(right: 2),
+        child: Icon(Icons.savings, size: 20, color: Color(0xFF4CAF50)),
+      )));
+    }
+    if (otherAssetCount > 0) {
+      assetWidgets.addAll(List.generate(otherAssetCount, (index) => Padding(
+        padding: EdgeInsets.only(right: index < otherAssetCount - 1 ? 2 : 0),
+        child: const Icon(Icons.inventory_2, size: 20, color: Color(0xFF4CAF50)),
+      )));
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Executors on the left
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: executorWidgets,
+        ),
+        // Assets on the right
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: assetWidgets,
+        ),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -43,10 +155,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : repository.getAll(includeArchived: false);
     final filteredCases = cases.where((c) =>
         c.title.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
+    final sortedCases = _sortCases(filteredCases);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Cases'),
+        backgroundColor: Colors.white,
+        title: Row(
+          children: [
+            const EstateIntakeIcon(width: 240, height: 240),
+            const SizedBox(width: 12),
+            const Text('Deceased Estate Intake'),
+          ],
+        ),
         actions: [
           if (LogHelper.canOpenLogFolder)
             IconButton(
@@ -66,52 +187,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
               tooltip: 'Seed Demo Cases',
               onPressed: _seedDemoCases,
             ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final def = await formState.loadDefinition();
-              final newCase = repository.createNew(def);
-              if (context.mounted) {
-                _openCase(context, newCase);
-              }
-            },
-            icon: const Icon(Icons.add),
-            label: const Text(
-              'New Case',
-              style: TextStyle(color: Colors.black),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-          ),
-          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
+          // Search and new case button row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                labelText: 'Search cases...',
-                prefixIcon: Icon(Icons.search),
-              ),
+            child: Row(
+              children: [
+                // Search field - constrained width (left)
+                SizedBox(
+                  width: 400,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Search cases...',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                
+                // New Case button (right)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final def = await formState.loadDefinition();
+                    final newCase = repository.createNew(def);
+                    if (context.mounted) {
+                      _openCase(context, newCase);
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text(
+                    'New Case',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    elevation: 2,
+                    shadowColor: Colors.black26,
+                    surfaceTintColor: Colors.transparent,
+                    overlayColor: MaterialStateColor.resolveWith((states) {
+                      if (states.contains(MaterialState.pressed)) {
+                        return Colors.transparent;
+                      }
+                      if (states.contains(MaterialState.hovered)) {
+                        return Colors.black.withOpacity(0.04);
+                      }
+                      return Colors.transparent;
+                    }),
+                  ),
+                ),
+              ],
             ),
           ),
+          
+          // Sort and archive controls row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Active')),
-                ButtonSegment(value: true, label: Text('Archived')),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                // Archive toggle (left)
+                Row(
+                  children: [
+                    FilterChip(
+                      label: const Text('Active'),
+                      selected: !_showArchived,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _showArchived = false;
+                          });
+                        }
+                      },
+                      backgroundColor: !_showArchived ? Colors.green.withOpacity(0.2) : null,
+                      selectedColor: Colors.green.withOpacity(0.3),
+                      showCheckmark: false,
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      label: const Text('Archived'),
+                      selected: _showArchived,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _showArchived = true;
+                          });
+                        }
+                      },
+                      backgroundColor: _showArchived ? Colors.yellow.withOpacity(0.2) : null,
+                      selectedColor: Colors.yellow.withOpacity(0.3),
+                      showCheckmark: false,
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  width: 1,
+                  height: 30,
+                  color: const Color.fromARGB(59, 194, 23, 23),
+                ),
+                const SizedBox(width: 16),
+                
+                // Sort buttons (right, scrollable)
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: SortOption.values.map((option) {
+                        final isSelected = _currentSort == option;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(option.label),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  _currentSort = option;
+                                });
+                              }
+                            },
+                            backgroundColor: isSelected ? Colors.blue.withOpacity(0.2) : null,
+                            selectedColor: Colors.blue.withOpacity(0.3),
+                            showCheckmark: false,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
               ],
-              selected: {_showArchived},
-              onSelectionChanged: (selection) {
-                setState(() {
-                  _showArchived = selection.first;
-                });
-              },
             ),
           ),
           Expanded(
@@ -125,48 +333,124 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filteredCases.length,
+                    itemCount: sortedCases.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final caseRecord = filteredCases[index];
+                      final caseRecord = sortedCases[index];
                       return Card(
                         child: ListTile(
-                          title: Text(caseRecord.title),
-                          subtitle: Text(
-                            'Updated: ${_formatDate(caseRecord.updatedAt)}',
-                          ),
-                          isThreeLine: true,
-                          trailing: Wrap(
-                            spacing: 8,
+                          title: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              TextButton(
+                              // Container 1: Case info column - fixed width to prevent wrapping
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 180, maxWidth: 220),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      caseRecord.title,
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Created: ${_formatDate(caseRecord.createdAt)}',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    Text(
+                                      'Updated: ${_formatDate(caseRecord.updatedAt)}',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Container 2: Indicators - scrollable when space is limited
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: _buildCaseIndicators(caseRecord),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Container 3: Action buttons row
+                              Container(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextButton(
                                 onPressed: () => _openCase(context, caseRecord),
+                                style: TextButton.styleFrom(
+                                  overlayColor: MaterialStateColor.resolveWith((states) {
+                                    if (states.contains(MaterialState.pressed)) {
+                                      return Colors.transparent;
+                                    }
+                                    if (states.contains(MaterialState.hovered)) {
+                                      return Colors.black.withOpacity(0.04);
+                                    }
+                                    return Colors.transparent;
+                                  }),
+                                ),
                                 child: const Text('Open'),
                               ),
-                              TextButton(
+                                    TextButton(
                                 onPressed: () => _runReport(context, caseRecord),
+                                style: TextButton.styleFrom(
+                                  overlayColor: MaterialStateColor.resolveWith((states) {
+                                    if (states.contains(MaterialState.pressed)) {
+                                      return Colors.transparent;
+                                    }
+                                    if (states.contains(MaterialState.hovered)) {
+                                      return Colors.black.withOpacity(0.04);
+                                    }
+                                    return Colors.transparent;
+                                  }),
+                                ),
                                 child: const Text('Report'),
                               ),
-                              TextButton(
+                                    TextButton(
                                 onPressed: () {
                                   repository.archive(
                                     caseRecord.id,
                                     !caseRecord.isArchived,
                                   );
                                 },
+                                style: TextButton.styleFrom(
+                                  overlayColor: MaterialStateColor.resolveWith((states) {
+                                    if (states.contains(MaterialState.pressed)) {
+                                      return Colors.transparent;
+                                    }
+                                    if (states.contains(MaterialState.hovered)) {
+                                      return Colors.black.withOpacity(0.04);
+                                    }
+                                    return Colors.transparent;
+                                  }),
+                                ),
                                 child: Text(
                                   caseRecord.isArchived
                                       ? 'Unarchive'
                                       : 'Archive',
                                 ),
                               ),
-                              // Only show delete button for archived cases
-                              if (caseRecord.isArchived)
-                                _DeletableCaseButton(
-                                  caseRecord: caseRecord,
-                                  repository: repository,
+                                    // Only show delete button for archived cases
+                                    if (caseRecord.isArchived)
+                                      _DeletableCaseButton(
+                                        caseRecord: caseRecord,
+                                        repository: repository,
+                                      ),
+                                  ],
                                 ),
+                              ),
                             ],
                           ),
                         ),
@@ -201,9 +485,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year;
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
-    return '$day/$month/$year $hour:$minute';
+    return '$day/$month/$year';
+  }
+
+  List<CaseRecord> _sortCases(List<CaseRecord> cases) {
+    final sortedCases = List<CaseRecord>.from(cases);
+    
+    switch (_currentSort) {
+      case SortOption.alphabeticalAZ:
+        sortedCases.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+      case SortOption.alphabeticalZA:
+        sortedCases.sort((a, b) => b.title.toLowerCase().compareTo(a.title.toLowerCase()));
+        break;
+      case SortOption.oldestCreated:
+        sortedCases.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case SortOption.newestCreated:
+        sortedCases.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case SortOption.oldestUpdated:
+        sortedCases.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+        break;
+      case SortOption.newestUpdated:
+        sortedCases.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        break;
+    }
+    
+    return sortedCases;
   }
 
   Future<void> _openLogsFolder() async {
@@ -263,6 +572,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              overlayColor: MaterialStateColor.resolveWith((states) {
+                if (states.contains(MaterialState.pressed)) {
+                  return Colors.transparent;
+                }
+                if (states.contains(MaterialState.hovered)) {
+                  return Colors.black.withOpacity(0.04);
+                }
+                return Colors.transparent;
+              }),
+            ),
             child: const Text('OK'),
           ),
         ],
@@ -352,6 +672,17 @@ class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              overlayColor: MaterialStateColor.resolveWith((states) {
+                if (states.contains(MaterialState.pressed)) {
+                  return Colors.transparent;
+                }
+                if (states.contains(MaterialState.hovered)) {
+                  return Colors.black.withOpacity(0.04);
+                }
+                return Colors.transparent;
+              }),
+            ),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -370,6 +701,15 @@ class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
+              overlayColor: MaterialStateColor.resolveWith((states) {
+                if (states.contains(MaterialState.pressed)) {
+                  return Colors.transparent;
+                }
+                if (states.contains(MaterialState.hovered)) {
+                  return Colors.red.withOpacity(0.04);
+                }
+                return Colors.transparent;
+              }),
             ),
             child: const Text('Delete Forever'),
           ),

@@ -489,12 +489,12 @@ Future<FormDefinition> loadFormDefinition() async {
               LayoutNodeRef(
                 id: 'executor_other_full_name_ref',
                 nodeId: 'executor_name',
-                widthFraction: 0.4,
+                widthFraction: 0.3,
               ),
               LayoutNodeRef(
                 id: 'executor_other_contact_ref',
                 nodeId: 'executor_contact',
-                widthFraction: 0.3,
+                widthFraction: 0.4,
               ),
               LayoutNodeRef(
                 id: 'executor_other_compensation_ref',
@@ -592,7 +592,7 @@ Future<FormDefinition> loadFormDefinition() async {
         id: 'rrsp_account_group',
         label: 'RRSP / RIFF Account',
         repeatable: true,
-        minInstances: 1,
+        minInstances: 0,
         children: [
           LayoutRow(
             id: 'rrsp_account_institution_row',
@@ -641,7 +641,7 @@ Future<FormDefinition> loadFormDefinition() async {
         id: 'nonreg_account_group',
         label: 'Non-Registered Account',
         repeatable: true,
-        minInstances: 1,
+        minInstances: 0,
         children: [
           LayoutRow(
             id: 'nonreg_account_institution_row',
@@ -703,7 +703,7 @@ Future<FormDefinition> loadFormDefinition() async {
         id: 'asset_group',
         label: 'Other Assets',
         repeatable: true,
-        minInstances: 1,
+        minInstances: 0,
         children: [
           LayoutRow(
             id: 'other_assets_row',
@@ -727,7 +727,7 @@ Future<FormDefinition> loadFormDefinition() async {
         id: 'realestate_group',
         label: 'Real Estate',
         repeatable: true,
-        minInstances: 1,
+        minInstances: 0,
         children: [
           LayoutNodeRef(
             id: 'realestate_principal_residence_ref',
@@ -961,93 +961,98 @@ Future<FormDefinition> loadFormDefinition() async {
               nodeId: 'professionals_involved',
               widthFraction: 1.0,
             ),
-            LayoutGroup(
-              id: 'lawyer_group',
-              label: 'Lawyer',
-              visibilityCondition: const ChoiceEqualsCondition(
-                nodeId: 'professionals_involved',
-                choiceIndex: 0,
-                expectedValue: true,
-              ),
+            LayoutRow(
+              id: 'professionals_row',
               children: [
-                LayoutNodeRef(
-                  id: 'lawyer_name_ref',
-                  nodeId: 'lawyer_name',
-                  widthFraction: 0.4,  // Reduced from 1.0 to 0.4
-                ),
-                LayoutRow(
-                  id: 'lawyer_row_1',
+                LayoutGroup(
+                  id: 'lawyer_group',
+                  label: 'Lawyer',
+                  visibilityCondition: const ChoiceEqualsCondition(
+                    nodeId: 'professionals_involved',
+                    choiceIndex: 0,
+                    expectedValue: true,
+                  ),
                   children: [
                     LayoutNodeRef(
-                      id: 'lawyer_firm_phone_ref',
-                      nodeId: 'lawyer_firm_phone',
-                      widthFraction: 0.5,
+                      id: 'lawyer_name_ref',
+                      nodeId: 'lawyer_name',
+                      widthFraction: 1.0,
                     ),
-                    LayoutNodeRef(
-                      id: 'lawyer_firm_email_ref',
-                      nodeId: 'lawyer_firm_email',
-                      widthFraction: 0.5,
+                    LayoutRow(
+                      id: 'lawyer_firm_contact_row',
+                      children: [
+                        LayoutNodeRef(
+                          id: 'lawyer_firm_phone_ref',
+                          nodeId: 'lawyer_firm_phone',
+                          widthFraction: 0.5,
+                        ),
+                        LayoutNodeRef(
+                          id: 'lawyer_firm_email_ref',
+                          nodeId: 'lawyer_firm_email',
+                          widthFraction: 0.5,
+                        ),
+                      ],
+                    ),
+                    LayoutRow(
+                      id: 'lawyer_rep_contact_row',
+                      children: [
+                        LayoutNodeRef(
+                          id: 'lawyer_rep_phone_ref',
+                          nodeId: 'lawyer_rep_phone',
+                          widthFraction: 0.5,
+                        ),
+                        LayoutNodeRef(
+                          id: 'lawyer_rep_email_ref',
+                          nodeId: 'lawyer_rep_email',
+                          widthFraction: 0.5,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                LayoutRow(
-                  id: 'lawyer_row_2',
+                LayoutGroup(
+                  id: 'advisor_group',
+                  label: 'Investment Advisor',
+                  visibilityCondition: const ChoiceEqualsCondition(
+                    nodeId: 'professionals_involved',
+                    choiceIndex: 1,
+                    expectedValue: true,
+                  ),
                   children: [
                     LayoutNodeRef(
-                      id: 'lawyer_rep_phone_ref',
-                      nodeId: 'lawyer_rep_phone',
-                      widthFraction: 0.5,
+                      id: 'advisor_name_ref',
+                      nodeId: 'advisor_name',
+                      widthFraction: 1.0,
                     ),
-                    LayoutNodeRef(
-                      id: 'lawyer_rep_email_ref',
-                      nodeId: 'lawyer_rep_email',
-                      widthFraction: 0.5,
+                    LayoutRow(
+                      id: 'advisor_firm_contact_row',
+                      children: [
+                        LayoutNodeRef(
+                          id: 'advisor_firm_phone_ref',
+                          nodeId: 'advisor_firm_phone',
+                          widthFraction: 0.5,
+                        ),
+                        LayoutNodeRef(
+                          id: 'advisor_firm_email_ref',
+                          nodeId: 'advisor_firm_email',
+                          widthFraction: 0.5,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
-            ),
-            LayoutGroup(
-              id: 'advisor_group',
-              label: 'Investment Advisor',
-              visibilityCondition: const ChoiceEqualsCondition(
-                nodeId: 'professionals_involved',
-                choiceIndex: 1,
-                expectedValue: true,
-              ),
-              children: [
-                LayoutNodeRef(
-                  id: 'advisor_name_ref',
-                  nodeId: 'advisor_name',
-                  widthFraction: 0.4,  // Reduced from 1.0 to 0.4
-                ),
-                LayoutRow(
-                  id: 'advisor_row_1',
-                  children: [
-                    LayoutNodeRef(
-                      id: 'advisor_firm_phone_ref',
-                      nodeId: 'advisor_firm_phone',
-                      widthFraction: 0.5,
-                    ),
-                    LayoutNodeRef(
-                      id: 'advisor_firm_email_ref',
-                      nodeId: 'advisor_firm_email',
-                      widthFraction: 0.5,
-                    ),
-                  ],
-                ),
-                LayoutRow(
-                  id: 'advisor_row_2',
-                  children: [
-                    LayoutNodeRef(
-                      id: 'advisor_rep_phone_ref',
-                      nodeId: 'advisor_rep_phone',
-                      widthFraction: 0.5,
-                    ),
-                    LayoutNodeRef(
-                      id: 'advisor_rep_email_ref',
-                      nodeId: 'advisor_rep_email',
-                      widthFraction: 0.5,
+                    LayoutRow(
+                      id: 'advisor_rep_contact_row',
+                      children: [
+                        LayoutNodeRef(
+                          id: 'advisor_rep_phone_ref',
+                          nodeId: 'advisor_rep_phone',
+                          widthFraction: 0.5,
+                        ),
+                        LayoutNodeRef(
+                          id: 'advisor_rep_email_ref',
+                          nodeId: 'advisor_rep_email',
+                          widthFraction: 0.5,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1114,6 +1119,12 @@ Future<FormDefinition> loadFormDefinition() async {
               children: const [],
             ),
             LayoutGroup(
+              id: 'realestate_repeatable_section',
+              label: 'Real Estate',
+              groupId: 'realestate_group',
+              children: const [],
+            ),
+            LayoutGroup(
               id: 'shares_group',
               label: 'Shares',
               children: [
@@ -1123,12 +1134,6 @@ Future<FormDefinition> loadFormDefinition() async {
                   widthFraction: 1.0,
                 ),
               ],
-            ),
-            LayoutGroup(
-              id: 'realestate_repeatable_section',
-              label: 'Real Estate',
-              groupId: 'realestate_group',
-              children: const [],
             ),
             LayoutGroup(
               id: 'other_assets_repeatable_section',

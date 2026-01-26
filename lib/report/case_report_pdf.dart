@@ -395,6 +395,10 @@ List<PdfFieldRow> _packFieldsIntoRows(List<FieldEntry> entries) {
 pw.Widget _renderPdfElement(PdfElement element) {
   switch (element) {
     case PdfSectionHeader():
+      final textColor = element.level == 1 && element.color != null 
+          ? element.color! 
+          : (element.level == 1 ? PdfColors.black : PdfColors.grey800);
+      
       return pw.Container(
         margin: pw.EdgeInsets.only(
           top: element.level == 1 ? 8 : 6,
@@ -405,9 +409,7 @@ pw.Widget _renderPdfElement(PdfElement element) {
           style: pw.TextStyle(
             fontSize: element.level == 1 ? 13 : 10,
             fontWeight: pw.FontWeight.bold,
-            color: element.level == 1 && element.color != null 
-                ? element.color! 
-                : (element.level == 1 ? PdfColors.black : PdfColors.grey800),
+            color: textColor,
           ),
         ),
       );
