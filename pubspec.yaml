@@ -36,6 +36,7 @@ flutter:
   assets:
     - assets/forms/
     - assets/estate_intake_icon.svg
+    - assets/estate_intake_icon.png
     - assets/logo.png
 
 # Flutter Launcher Icons Configuration
@@ -44,5 +45,5 @@ flutter_launcher_icons:
   ios: false
   windows:
     generate: true
-    image_path: "assets/estate_intake_icon.svg"
+    image_path: "assets/estate_intake_icon.png"
     icon_size: 48 # 48x48 for .exe
