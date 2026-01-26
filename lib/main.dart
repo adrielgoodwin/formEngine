@@ -80,9 +80,36 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Form Engine',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.windows: _NoTransitionBuilder(),
+            TargetPlatform.linux: _NoTransitionBuilder(),
+            TargetPlatform.macOS: _NoTransitionBuilder(),
+            TargetPlatform.android: _NoTransitionBuilder(),
+            TargetPlatform.iOS: _NoTransitionBuilder(),
+            TargetPlatform.fuchsia: _NoTransitionBuilder(),
+          },
+        ),
+      ),
       home: const DashboardScreen(),
       debugShowCheckedModeBanner: false,
     );
+  }
+}
+
+class _NoTransitionBuilder extends PageTransitionsBuilder {
+  const _NoTransitionBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
   }
 }
