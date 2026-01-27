@@ -201,7 +201,7 @@ List<PdfElement> _extractElementsFromLayout(
         if (entry != null) fieldEntries.add(entry);
 
       case LayoutRow():
-        // Collect fields from row children
+        // Collect fields from row children, handling all child types
         for (final child in item.children) {
           if (child.visibilityCondition != null &&
               !child.visibilityCondition!.evaluate(scopeValues) &&
@@ -213,11 +213,55 @@ List<PdfElement> _extractElementsFromLayout(
             if (entry != null) fieldEntries.add(entry);
           } else if (child is LayoutColumn) {
             // Recurse into nested columns
-            for (final subChild in child.children) {
-              if (subChild is LayoutNodeRef) {
-                final entry = _createFieldEntry(subChild, def, scopeValues, renderedNodeIds);
-                if (entry != null) fieldEntries.add(entry);
+            flushFields();
+            elements.addAll(_extractElementsFromLayout(
+              child.children,
+              def,
+              instance,
+              scopeValues,
+              renderedNodeIds,
+            ));
+          } else if (child is LayoutGroup) {
+            // Handle inline groups (like Partner Info, Lawyer, Advisor)
+            flushFields();
+            if (child.groupId != null) {
+              final groupDef = def.groups[child.groupId];
+              if (groupDef != null && groupDef.repeatable) {
+                final instances = instance.getGroupInstances(child.groupId!);
+                for (var i = 0; i < instances.length; i++) {
+                  final groupInstance = instances[i];
+                  if (i > 0) elements.add(PdfDivider());
+                  elements.addAll(_extractGroupInstanceElements(
+                    groupDef.children,
+                    def,
+                    instance,
+                    groupInstance,
+                    renderedNodeIds,
+                  ));
+                }
+              } else if (groupDef != null) {
+                final instances = instance.getGroupInstances(child.groupId!);
+                if (instances.isNotEmpty) {
+                  elements.addAll(_extractGroupInstanceElements(
+                    groupDef.children,
+                    def,
+                    instance,
+                    instances.first,
+                    renderedNodeIds,
+                  ));
+                }
               }
+            } else {
+              if (child.label.isNotEmpty) {
+                elements.add(PdfSectionHeader(child.label, level: 2));
+              }
+              elements.addAll(_extractElementsFromLayout(
+                child.children,
+                def,
+                instance,
+                scopeValues,
+                renderedNodeIds,
+              ));
             }
           }
         }
@@ -323,13 +367,26 @@ List<PdfElement> _extractGroupInstanceElements(
             final entry = _createFieldEntryFromValue(child, value, def, renderedNodeIds);
             if (entry != null) fieldEntries.add(entry);
           } else if (child is LayoutColumn) {
-            for (final subChild in child.children) {
-              if (subChild is LayoutNodeRef) {
-                final value = groupInstance.values[subChild.nodeId] ?? instance.values[subChild.nodeId];
-                final entry = _createFieldEntryFromValue(subChild, value, def, renderedNodeIds);
-                if (entry != null) fieldEntries.add(entry);
-              }
+            flushFields();
+            elements.addAll(_extractGroupInstanceElements(
+              child.children,
+              def,
+              instance,
+              groupInstance,
+              renderedNodeIds,
+            ));
+          } else if (child is LayoutGroup) {
+            flushFields();
+            if (child.label.isNotEmpty) {
+              elements.add(PdfSectionHeader(child.label, level: 2));
             }
+            elements.addAll(_extractGroupInstanceElements(
+              child.children,
+              def,
+              instance,
+              groupInstance,
+              renderedNodeIds,
+            ));
           }
         }
 
