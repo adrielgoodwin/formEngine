@@ -242,6 +242,10 @@ List<PdfElement> _extractElementsFromLayout(
               } else if (groupDef != null) {
                 final instances = instance.getGroupInstances(child.groupId!);
                 if (instances.isNotEmpty) {
+                  // Add the group's label as a section header for RRN groups
+                  if (child.label.isNotEmpty) {
+                    elements.add(PdfSectionHeader(child.label, level: 2));
+                  }
                   elements.addAll(_extractGroupInstanceElements(
                     groupDef.children,
                     def,
@@ -296,6 +300,10 @@ List<PdfElement> _extractElementsFromLayout(
           } else if (groupDef != null) {
             final instances = instance.getGroupInstances(item.groupId!);
             if (instances.isNotEmpty) {
+              // Add the group's label as a section header for RRN groups
+              if (item.label.isNotEmpty) {
+                elements.add(PdfSectionHeader(item.label, level: 2));
+              }
               elements.addAll(_extractGroupInstanceElements(
                 groupDef.children,
                 def,
