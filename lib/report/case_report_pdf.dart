@@ -618,12 +618,12 @@ Future<String> createCasePdfFileForWindows(CaseRecord record, FormDefinition def
 Future<bool> openPdfFileOnWindows(String filePath) async {
   final logger = AppLogger.instance;
   try {
-    final result = await Process.run('explorer', [filePath]);
-    final ok = result.exitCode == 0;
-    if (!ok) {
-      logger.warn('report', 'Failed to open PDF: exitCode=${result.exitCode}');
-    }
-    return ok;
+    // explorer.exe can return a non-zero exit code even when it successfully
+    // hands the file off to the default PDF viewer. Treat a successful spawn
+    // as success and only fail on exception.
+    await Process.start('explorer', [filePath]);
+    logger.debug('report', 'Requested open PDF: path=$filePath');
+    return true;
   } catch (e, st) {
     logger.error('report', 'Failed to open PDF: ${e.runtimeType}', error: e, stackTrace: st);
     return false;
