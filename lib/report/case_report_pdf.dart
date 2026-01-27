@@ -34,6 +34,44 @@ class FieldEntry {
   });
 }
 
+bool _hasAnyRenderableValue(
+  LayoutItem item,
+  FormDefinition def,
+  Map<String, Object?> scopeValues,
+) {
+  switch (item) {
+    case LayoutNodeRef():
+      final node = def.nodes[item.nodeId];
+      if (node == null) return false;
+      final value = scopeValues[item.nodeId];
+      final spec = def.dataSpecs[item.nodeId];
+      final displayValue = _formatValue(value, node, spec);
+      return displayValue != null && displayValue.isNotEmpty;
+
+    case LayoutRow():
+      for (final child in item.children) {
+        if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
+      }
+      return false;
+
+    case LayoutColumn():
+      for (final child in item.children) {
+        if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
+      }
+      return false;
+
+    case LayoutGroup():
+      // If groupId is set and children are empty (repeatable groups), we don't
+      // have enough info at this layer to introspect the group's internal nodeIds.
+      // For inline groups (no groupId), recurse into children.
+      if (item.groupId != null && item.children.isEmpty) return false;
+      for (final child in item.children) {
+        if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
+      }
+      return false;
+  }
+}
+
 // =============================================================================
 // SectionEntry: Represents a section header or group instance header
 // =============================================================================
@@ -102,6 +140,7 @@ Future<Uint8List> buildCasePdf(CaseRecord record, FormDefinition def) async {
 
 List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
   final elements = <PdfElement>[];
+  final renderedNodeIds = <String>{};
 
   for (final block in def.blocks) {
     // Convert Flutter Color to PDF Color
@@ -117,7 +156,15 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
       def,
       instance,
       instance.values,
+      renderedNodeIds,
     ));
+    elements.add(PdfSpacer(12));
+  }
+
+  final remaining = _buildRemainingFieldEntries(def, instance, renderedNodeIds);
+  if (remaining.isNotEmpty) {
+    elements.add(PdfSectionHeader('Additional Fields', level: 1));
+    elements.addAll(_packFieldsIntoRows(remaining));
     elements.add(PdfSpacer(12));
   }
 
@@ -129,6 +176,7 @@ List<PdfElement> _extractElementsFromLayout(
   FormDefinition def,
   FormInstance instance,
   Map<String, Object?> scopeValues,
+  Set<String> renderedNodeIds,
 ) {
   final fieldEntries = <FieldEntry>[];
   final elements = <PdfElement>[];
@@ -142,30 +190,32 @@ List<PdfElement> _extractElementsFromLayout(
 
   for (final item in items) {
     if (item.visibilityCondition != null &&
-        !item.visibilityCondition!.evaluate(scopeValues)) {
+        !item.visibilityCondition!.evaluate(scopeValues) &&
+        !_hasAnyRenderableValue(item, def, scopeValues)) {
       continue;
     }
 
     switch (item) {
       case LayoutNodeRef():
-        final entry = _createFieldEntry(item, def, scopeValues);
+        final entry = _createFieldEntry(item, def, scopeValues, renderedNodeIds);
         if (entry != null) fieldEntries.add(entry);
 
       case LayoutRow():
         // Collect fields from row children
         for (final child in item.children) {
           if (child.visibilityCondition != null &&
-              !child.visibilityCondition!.evaluate(scopeValues)) {
+              !child.visibilityCondition!.evaluate(scopeValues) &&
+              !_hasAnyRenderableValue(child, def, scopeValues)) {
             continue;
           }
           if (child is LayoutNodeRef) {
-            final entry = _createFieldEntry(child, def, scopeValues);
+            final entry = _createFieldEntry(child, def, scopeValues, renderedNodeIds);
             if (entry != null) fieldEntries.add(entry);
           } else if (child is LayoutColumn) {
             // Recurse into nested columns
             for (final subChild in child.children) {
               if (subChild is LayoutNodeRef) {
-                final entry = _createFieldEntry(subChild, def, scopeValues);
+                final entry = _createFieldEntry(subChild, def, scopeValues, renderedNodeIds);
                 if (entry != null) fieldEntries.add(entry);
               }
             }
@@ -178,6 +228,7 @@ List<PdfElement> _extractElementsFromLayout(
           def,
           instance,
           scopeValues,
+          renderedNodeIds,
         ));
 
       case LayoutGroup():
@@ -195,6 +246,7 @@ List<PdfElement> _extractElementsFromLayout(
                 def,
                 instance,
                 groupInstance,
+                renderedNodeIds,
               ));
             }
           } else if (groupDef != null) {
@@ -205,6 +257,7 @@ List<PdfElement> _extractElementsFromLayout(
                 def,
                 instance,
                 instances.first,
+                renderedNodeIds,
               ));
             }
           }
@@ -217,6 +270,7 @@ List<PdfElement> _extractElementsFromLayout(
             def,
             instance,
             scopeValues,
+            renderedNodeIds,
           ));
         }
     }
@@ -231,6 +285,7 @@ List<PdfElement> _extractGroupInstanceElements(
   FormDefinition def,
   FormInstance instance,
   GroupInstance groupInstance,
+  Set<String> renderedNodeIds,
 ) {
   final scopeValues = {...instance.values, ...groupInstance.values};
   final fieldEntries = <FieldEntry>[];
@@ -245,31 +300,33 @@ List<PdfElement> _extractGroupInstanceElements(
 
   for (final item in items) {
     if (item.visibilityCondition != null &&
-        !item.visibilityCondition!.evaluate(scopeValues)) {
+        !item.visibilityCondition!.evaluate(scopeValues) &&
+        !_hasAnyRenderableValue(item, def, scopeValues)) {
       continue;
     }
 
     switch (item) {
       case LayoutNodeRef():
         final value = groupInstance.values[item.nodeId] ?? instance.values[item.nodeId];
-        final entry = _createFieldEntryFromValue(item, value, def);
+        final entry = _createFieldEntryFromValue(item, value, def, renderedNodeIds);
         if (entry != null) fieldEntries.add(entry);
 
       case LayoutRow():
         for (final child in item.children) {
           if (child.visibilityCondition != null &&
-              !child.visibilityCondition!.evaluate(scopeValues)) {
+              !child.visibilityCondition!.evaluate(scopeValues) &&
+              !_hasAnyRenderableValue(child, def, scopeValues)) {
             continue;
           }
           if (child is LayoutNodeRef) {
             final value = groupInstance.values[child.nodeId] ?? instance.values[child.nodeId];
-            final entry = _createFieldEntryFromValue(child, value, def);
+            final entry = _createFieldEntryFromValue(child, value, def, renderedNodeIds);
             if (entry != null) fieldEntries.add(entry);
           } else if (child is LayoutColumn) {
             for (final subChild in child.children) {
               if (subChild is LayoutNodeRef) {
                 final value = groupInstance.values[subChild.nodeId] ?? instance.values[subChild.nodeId];
-                final entry = _createFieldEntryFromValue(subChild, value, def);
+                final entry = _createFieldEntryFromValue(subChild, value, def, renderedNodeIds);
                 if (entry != null) fieldEntries.add(entry);
               }
             }
@@ -282,6 +339,7 @@ List<PdfElement> _extractGroupInstanceElements(
           def,
           instance,
           groupInstance,
+          renderedNodeIds,
         ));
 
       case LayoutGroup():
@@ -294,6 +352,7 @@ List<PdfElement> _extractGroupInstanceElements(
           def,
           instance,
           groupInstance,
+          renderedNodeIds,
         ));
     }
   }
@@ -310,15 +369,17 @@ FieldEntry? _createFieldEntry(
   LayoutNodeRef nodeRef,
   FormDefinition def,
   Map<String, Object?> scopeValues,
+  Set<String> renderedNodeIds,
 ) {
   final value = scopeValues[nodeRef.nodeId];
-  return _createFieldEntryFromValue(nodeRef, value, def);
+  return _createFieldEntryFromValue(nodeRef, value, def, renderedNodeIds);
 }
 
 FieldEntry? _createFieldEntryFromValue(
   LayoutNodeRef nodeRef,
   Object? value,
   FormDefinition def,
+  Set<String> renderedNodeIds,
 ) {
   final node = def.nodes[nodeRef.nodeId];
   if (node == null) return null;
@@ -329,6 +390,8 @@ FieldEntry? _createFieldEntryFromValue(
   // Omit empty fields for compactness
   if (displayValue == null || displayValue.isEmpty) return null;
 
+  renderedNodeIds.add(nodeRef.nodeId);
+
   // Determine if field prefers full width based on content length or type
   final preferFullWidth = _shouldPreferFullWidth(displayValue, nodeRef.widthFraction, dataSpec);
 
@@ -338,6 +401,44 @@ FieldEntry? _createFieldEntryFromValue(
     weight: nodeRef.widthFraction,
     preferFullWidth: preferFullWidth,
   );
+}
+
+List<FieldEntry> _buildRemainingFieldEntries(
+  FormDefinition def,
+  FormInstance instance,
+  Set<String> renderedNodeIds,
+) {
+  final entries = <FieldEntry>[];
+
+  void addIfPresent(String nodeId, Object? value) {
+    if (renderedNodeIds.contains(nodeId)) return;
+    final node = def.nodes[nodeId];
+    if (node == null) return;
+    final spec = def.dataSpecs[nodeId];
+    final displayValue = _formatValue(value, node, spec);
+    if (displayValue == null || displayValue.isEmpty) return;
+
+    renderedNodeIds.add(nodeId);
+    final preferFullWidth = _shouldPreferFullWidth(displayValue, 1.0, spec);
+    entries.add(
+      FieldEntry(
+        label: node.label,
+        value: displayValue,
+        weight: 1.0,
+        preferFullWidth: preferFullWidth,
+      ),
+    );
+  }
+
+  for (final nodeId in def.dataSpecs.keys) {
+    addIfPresent(nodeId, instance.values[nodeId]);
+  }
+
+  for (final entry in instance.values.entries) {
+    addIfPresent(entry.key, entry.value);
+  }
+
+  return entries;
 }
 
 bool _shouldPreferFullWidth(String value, double widthFraction, DataSpec? dataSpec) {
