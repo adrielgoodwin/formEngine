@@ -248,16 +248,26 @@ List<PdfElement> _extractElementsFromLayout(
               final groupDef = def.groups[child.groupId];
               if (groupDef != null && groupDef.repeatable) {
                 final instances = instance.getGroupInstances(child.groupId!);
-                for (var i = 0; i < instances.length; i++) {
-                  final groupInstance = instances[i];
-                  if (i > 0) elements.add(PdfDivider());
-                  elements.addAll(_extractGroupInstanceElements(
-                    groupDef.children,
-                    def,
-                    instance,
-                    groupInstance,
-                    renderedNodeIds,
-                  ));
+                if (instances.isNotEmpty) {
+                  // Add section header for repeatable groups
+                  if (child.label.isNotEmpty) {
+                    elements.add(PdfSectionHeader(
+                      child.label,
+                      level: 2,
+                      iconSymbol: _getIconSymbolForGroup(child.groupId),
+                    ));
+                  }
+                  for (var i = 0; i < instances.length; i++) {
+                    final groupInstance = instances[i];
+                    if (i > 0) elements.add(PdfDivider());
+                    elements.addAll(_extractGroupInstanceElements(
+                      groupDef.children,
+                      def,
+                      instance,
+                      groupInstance,
+                      renderedNodeIds,
+                    ));
+                  }
                 }
               } else if (groupDef != null) {
                 final instances = instance.getGroupInstances(child.groupId!);
@@ -313,17 +323,26 @@ List<PdfElement> _extractElementsFromLayout(
           final groupDef = def.groups[item.groupId];
           if (groupDef != null && groupDef.repeatable) {
             final instances = instance.getGroupInstances(item.groupId!);
-            for (var i = 0; i < instances.length; i++) {
-              final groupInstance = instances[i];
-              if (i > 0) elements.add(PdfDivider());
-              // Removed subtitle: '${groupDef.label} ${i + 1}' - no more "Executor 1", "Executor 2", etc.
-              elements.addAll(_extractGroupInstanceElements(
-                groupDef.children,
-                def,
-                instance,
-                groupInstance,
-                renderedNodeIds,
-              ));
+            if (instances.isNotEmpty) {
+              // Add section header for repeatable groups (assets, executors, etc.)
+              if (item.label.isNotEmpty) {
+                elements.add(PdfSectionHeader(
+                  item.label,
+                  level: 2,
+                  iconSymbol: _getIconSymbolForGroup(item.groupId),
+                ));
+              }
+              for (var i = 0; i < instances.length; i++) {
+                final groupInstance = instances[i];
+                if (i > 0) elements.add(PdfDivider());
+                elements.addAll(_extractGroupInstanceElements(
+                  groupDef.children,
+                  def,
+                  instance,
+                  groupInstance,
+                  renderedNodeIds,
+                ));
+              }
             }
           } else if (groupDef != null) {
             final instances = instance.getGroupInstances(item.groupId!);
