@@ -82,8 +82,7 @@ class PdfSectionHeader extends PdfElement {
   final String title;
   final int level; // 1 = block, 2 = group/subsection
   final PdfColor? color; // Optional color for block headers
-  final String? iconSymbol; // Optional Unicode symbol for the section
-  PdfSectionHeader(this.title, {this.level = 1, this.color, this.iconSymbol});
+  PdfSectionHeader(this.title, {this.level = 1, this.color});
 }
 
 class PdfFieldRow extends PdfElement {
@@ -96,25 +95,6 @@ class PdfDivider extends PdfElement {}
 class PdfSpacer extends PdfElement {
   final double height;
   PdfSpacer([this.height = 8]);
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-String? _getIconSymbolForGroup(String? groupId) {
-  switch (groupId) {
-    case 'rrsp_account_group':
-      return '🏦'; // Bank icon for RRSP
-    case 'realestate_group':
-      return '🏠'; // House icon for real estate
-    case 'nonreg_account_group':
-      return '💰'; // Money bag for non-registered
-    case 'asset_group':
-      return '📦'; // Package for other assets
-    default:
-      return null; // No icon for other groups
-  }
 }
 
 // =============================================================================
@@ -254,7 +234,6 @@ List<PdfElement> _extractElementsFromLayout(
                     elements.add(PdfSectionHeader(
                       child.label,
                       level: 2,
-                      iconSymbol: _getIconSymbolForGroup(child.groupId),
                     ));
                   }
                   for (var i = 0; i < instances.length; i++) {
@@ -277,7 +256,6 @@ List<PdfElement> _extractElementsFromLayout(
                     elements.add(PdfSectionHeader(
                       child.label, 
                       level: 2,
-                      iconSymbol: _getIconSymbolForGroup(child.groupId),
                     ));
                   }
                   elements.addAll(_extractGroupInstanceElements(
@@ -294,7 +272,6 @@ List<PdfElement> _extractElementsFromLayout(
                 elements.add(PdfSectionHeader(
                   child.label, 
                   level: 2,
-                  iconSymbol: _getIconSymbolForGroup(child.groupId),
                 ));
               }
               elements.addAll(_extractElementsFromLayout(
@@ -329,7 +306,6 @@ List<PdfElement> _extractElementsFromLayout(
                 elements.add(PdfSectionHeader(
                   item.label,
                   level: 2,
-                  iconSymbol: _getIconSymbolForGroup(item.groupId),
                 ));
               }
               for (var i = 0; i < instances.length; i++) {
@@ -352,7 +328,6 @@ List<PdfElement> _extractElementsFromLayout(
                 elements.add(PdfSectionHeader(
                   item.label, 
                   level: 2,
-                  iconSymbol: _getIconSymbolForGroup(item.groupId),
                 ));
               }
               elements.addAll(_extractGroupInstanceElements(
@@ -440,7 +415,6 @@ List<PdfElement> _extractGroupInstanceElements(
               elements.add(PdfSectionHeader(
                 child.label, 
                 level: 2,
-                iconSymbol: _getIconSymbolForGroup(child.groupId),
               ));
             }
             elements.addAll(_extractGroupInstanceElements(
@@ -468,7 +442,6 @@ List<PdfElement> _extractGroupInstanceElements(
           elements.add(PdfSectionHeader(
             item.label, 
             level: 2,
-            iconSymbol: _getIconSymbolForGroup(item.groupId),
           ));
         }
         elements.addAll(_extractGroupInstanceElements(
@@ -629,17 +602,13 @@ pw.Widget _renderPdfElement(PdfElement element) {
           ? element.color! 
           : (element.level == 1 ? PdfColors.black : PdfColors.grey800);
       
-      final titleWithIcon = element.iconSymbol != null 
-          ? '${element.iconSymbol} ${element.title}'
-          : element.title;
-      
       return pw.Container(
         margin: pw.EdgeInsets.only(
           top: element.level == 1 ? 8 : 6,
           bottom: element.level == 1 ? 4 : 2,
         ),
         child: pw.Text(
-          titleWithIcon,
+          element.title,
           style: pw.TextStyle(
             fontSize: element.level == 1 ? 13 : 10,
             fontWeight: pw.FontWeight.bold,
