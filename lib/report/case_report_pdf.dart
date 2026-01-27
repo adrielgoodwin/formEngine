@@ -1,7 +1,11 @@
 import 'dart:typed_data';
+import 'dart:io';
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/case_record.dart';
 import '../models/form_block.dart';
@@ -10,6 +14,7 @@ import '../models/form_instance.dart';
 import '../models/form_node.dart';
 import '../models/group_instance.dart';
 import '../models/layout_item.dart';
+import '../logging/app_logger.dart';
 
 // =============================================================================
 // FieldEntry: Represents a single field for PDF layout
@@ -522,9 +527,12 @@ String? _formatTextValue(Object? value, ValueProfile profile) {
   switch (profile) {
     case ValueProfile.moneyCents:
       if (value is int) {
-        final dollars = value ~/ 100;
-        final cents = value % 100;
-        final formatted = '\$${_formatWithCommas(dollars)}.${cents.toString().padLeft(2, '0')}';
+        final isNegative = value < 0;
+        final absValue = value.abs();
+        final dollars = absValue ~/ 100;
+        final cents = absValue % 100;
+        final sign = isNegative ? '-' : '';
+        final formatted = '$sign\$${_formatWithCommas(dollars)}.${cents.toString().padLeft(2, '0')}';
         return formatted;
       }
       return value.toString();
@@ -574,8 +582,81 @@ String _formatDateTime(DateTime dt) {
 }
 
 Future<void> previewCasePdf(CaseRecord record, FormDefinition def) async {
+  if (Platform.isWindows) {
+    final path = await createCasePdfFileForWindows(record, def);
+    await openPdfFileOnWindows(path);
+    return;
+  }
+
   await Printing.layoutPdf(
     onLayout: (format) => buildCasePdf(record, def),
     name: '${record.title}.pdf',
   );
+}
+
+Future<String> createCasePdfFileForWindows(CaseRecord record, FormDefinition def) async {
+  final logger = AppLogger.instance;
+  final bytes = await buildCasePdf(record, def);
+
+  final baseDir = await getApplicationSupportDirectory();
+  final reportsDir = Directory(p.join(baseDir.path, 'EstateIntake', 'reports'));
+  if (!reportsDir.existsSync()) {
+    reportsDir.createSync(recursive: true);
+  }
+
+  final deceasedName = (record.formInstance.getValue<String>('deceased_name') ?? '').trim();
+  final dod = (record.formInstance.getValue<String>('deceased_dod') ?? '').trim();
+  final filename = _safeFilename(_buildReportFilename(deceasedName, dod, record.id));
+  final filePath = p.join(reportsDir.path, filename);
+
+  final file = File(filePath);
+  await file.writeAsBytes(bytes, flush: true);
+  logger.info('report', 'PDF generated: case=${record.id} path=$filePath');
+  return filePath;
+}
+
+Future<bool> openPdfFileOnWindows(String filePath) async {
+  final logger = AppLogger.instance;
+  try {
+    final result = await Process.run('explorer', [filePath]);
+    final ok = result.exitCode == 0;
+    if (!ok) {
+      logger.warn('report', 'Failed to open PDF: exitCode=${result.exitCode}');
+    }
+    return ok;
+  } catch (e, st) {
+    logger.error('report', 'Failed to open PDF: ${e.runtimeType}', error: e, stackTrace: st);
+    return false;
+  }
+}
+
+Future<bool> openPdfFolderOnWindows(String filePath) async {
+  final logger = AppLogger.instance;
+  try {
+    final folder = Directory(p.dirname(filePath));
+    final result = await Process.run('explorer', [folder.path]);
+    final ok = result.exitCode == 0;
+    if (!ok) {
+      logger.warn('report', 'Failed to open PDF folder: exitCode=${result.exitCode}');
+    }
+    return ok;
+  } catch (e, st) {
+    logger.error('report', 'Failed to open PDF folder: ${e.runtimeType}', error: e, stackTrace: st);
+    return false;
+  }
+}
+
+String _buildReportFilename(String deceasedName, String dod, String caseId) {
+  final namePart = deceasedName.isEmpty ? 'Unknown' : deceasedName;
+  final dodPart = dod.isEmpty ? 'UnknownDoD' : dod;
+  return '$namePart - $dodPart - $caseId.pdf';
+}
+
+String _safeFilename(String input) {
+  final sanitized = input
+      .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  if (sanitized.isEmpty) return 'report.pdf';
+  return sanitized;
 }

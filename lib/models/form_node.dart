@@ -147,11 +147,11 @@ class MoneyFormatting extends FieldFormatting {
   const MoneyFormatting();
   @override
   List<TextInputFormatter> formatters() => [
-        FilteringTextInputFormatter.digitsOnly,
+        FilteringTextInputFormatter.allow(RegExp(r'[\d\-]')),
         const MoneyCentsFormatter(),
       ];
   @override
-  TextInputType keyboardType() => TextInputType.number;
+  TextInputType keyboardType() => const TextInputType.numberWithOptions(signed: true);
   @override
   String? prefixText() => '\$';
 }
@@ -276,14 +276,29 @@ List<FieldValidator> effectiveValidatorsFor(DataSpec spec) {
 
 /// Parses raw text to canonical value based on profile.
 Object? parseCanonical(ValueProfile profile, String text) {
-  final digits = text.replaceAll(RegExp(r'\D'), '');
   return switch (profile) {
-    ValueProfile.moneyCents => digits.isEmpty ? null : int.tryParse(digits),
-    ValueProfile.sinCanada => digits.isEmpty ? null : digits,
-    ValueProfile.phoneNorthAmerica => digits.isEmpty ? null : digits,
+    ValueProfile.moneyCents => _parseMoneyValue(text),
+    ValueProfile.sinCanada => () {
+      final digits = text.replaceAll(RegExp(r'\D'), '');
+      return digits.isEmpty ? null : digits;
+    }(),
+    ValueProfile.phoneNorthAmerica => () {
+      final digits = text.replaceAll(RegExp(r'\D'), '');
+      return digits.isEmpty ? null : digits;
+    }(),
     ValueProfile.dateDdMmYyyy => text.trim().isEmpty ? null : text,
     ValueProfile.plainText => text,
   };
+}
+
+/// Parses money text to cents, supporting negative values.
+int? _parseMoneyValue(String text) {
+  final isNegative = text.contains('-');
+  final digits = text.replaceAll(RegExp(r'[^\d]'), '');
+  if (digits.isEmpty) return null;
+  final value = int.tryParse(digits);
+  if (value == null) return null;
+  return isNegative ? -value : value;
 }
 
 /* 

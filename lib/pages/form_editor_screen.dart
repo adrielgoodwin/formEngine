@@ -26,16 +26,21 @@ class _FormEditorScreenState extends State<FormEditorScreen> {
     final repository = context.read<CaseRepository>();
     final currentCase = formState.currentCase;
 
-    // Update case before leaving
-    if (currentCase != null) {
-      final formInstance = formState.formInstance;
-      if (formInstance != null) {
-        final nameValue = _deriveTitleFromInstance(formInstance);
-        if (nameValue != null) {
-          currentCase.title = nameValue;
+    // Update case before leaving - wrapped in try-catch to ensure navigation happens
+    try {
+      if (currentCase != null) {
+        final formInstance = formState.formInstance;
+        if (formInstance != null) {
+          final nameValue = _deriveTitleFromInstance(formInstance);
+          if (nameValue != null) {
+            currentCase.title = nameValue;
+          }
         }
+        repository.update(currentCase);
       }
-      repository.update(currentCase);
+    } catch (e) {
+      // Log but don't block navigation - file may be locked by another user
+      debugPrint('Failed to save case on back: $e');
     }
 
     Navigator.of(context).pop();

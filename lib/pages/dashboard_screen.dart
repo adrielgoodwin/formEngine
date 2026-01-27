@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../data/case_repository.dart';
 import '../demo_seed.dart';
 import '../models/case_record.dart';
@@ -357,6 +359,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       maxLines: 1,
                                     ),
                                     const SizedBox(height: 2),
+                                    // Date of Death from form data
+                                    Builder(
+                                      builder: (context) {
+                                        final dod = caseRecord.formInstance.getValue<String>('deceased_dod');
+                                        if (dod != null && dod.isNotEmpty) {
+                                          return Text(
+                                            'Date of Death: $dod',
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Colors.red[700],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          );
+                                        }
+                                        return const SizedBox.shrink();
+                                      },
+                                    ),
                                     Text(
                                       'Created: ${_formatDate(caseRecord.createdAt)}',
                                       style: Theme.of(context).textTheme.bodySmall,
@@ -416,7 +436,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     return Colors.transparent;
                                   }),
                                 ),
-                                child: const Text('Report'),
+                                child: const Text('PDF Report'),
                               ),
                                     TextButton(
                                 onPressed: () {
@@ -476,9 +496,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _runReport(BuildContext context, CaseRecord caseRecord) async {
-    final formState = context.read<FormStateProvider>();
-    final def = await formState.loadDefinition();
-    await previewCasePdf(caseRecord, def);
+    try {
+      final formState = context.read<FormStateProvider>();
+      final def = await formState.loadDefinition();
+
+      if (Platform.isWindows) {
+        final filePath = await createCasePdfFileForWindows(caseRecord, def);
+        final opened = await openPdfFileOnWindows(filePath);
+        if (!opened && mounted) {
+          _showPdfOpenFailedDialog(filePath);
+        }
+        return;
+      }
+
+      await previewCasePdf(caseRecord, def);
+    } catch (e, st) {
+      AppLogger.instance.error(
+        'report',
+        'PDF report failed for case=${caseRecord.id}: ${e.runtimeType}',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('PDF Report Failed'),
+          content: const Text(
+            'The PDF could not be generated on this machine. Please try again, or contact support and include the logs.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _showPdfOpenFailedDialog(String filePath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('PDF Created'),
+        content: const Text(
+          'The PDF was created, but Windows could not open it automatically. You can copy the file path or open the folder.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: filePath));
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Copy Path'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await openPdfFolderOnWindows(filePath);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Open Folder'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {

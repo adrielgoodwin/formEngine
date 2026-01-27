@@ -34,20 +34,49 @@ class MoneyCentsFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return const TextEditingValue(text: '');
+    final text = newValue.text;
+    final isDeleting = newValue.text.length < oldValue.text.length;
+    final isNegative = text.startsWith('-');
+    final digits = text.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (digits.isEmpty) {
+      if (isNegative) {
+        return const TextEditingValue(
+          text: '-',
+          selection: TextSelection.collapsed(offset: 1),
+        );
+      }
+      return const TextEditingValue(text: '');
+    }
+
+    if (isDeleting && _allZeros(digits)) {
+      if (isNegative) {
+        return const TextEditingValue(
+          text: '-',
+          selection: TextSelection.collapsed(offset: 1),
+        );
+      }
+      return const TextEditingValue(text: '');
+    }
 
     final cents = int.tryParse(digits) ?? 0;
     final dollars = cents ~/ 100;
     final centPart = (cents % 100).toString().padLeft(2, '0');
 
     final dollarsStr = _groupThousands(dollars.toString());
-    final text = '$dollarsStr.$centPart';
+    final formattedText = isNegative ? '-$dollarsStr.$centPart' : '$dollarsStr.$centPart';
 
     return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
     );
+  }
+
+  bool _allZeros(String s) {
+    for (final ch in s.split('')) {
+      if (ch != '0') return false;
+    }
+    return true;
   }
 
   String _groupThousands(String s) {
