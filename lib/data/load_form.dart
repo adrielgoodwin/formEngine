@@ -1100,7 +1100,7 @@ Future<FormDefinition> loadFormDefinition() async {
             ),
             LayoutGroup(
               id: 'trustee_repeatable_group',
-              label: 'Trustees',
+              label: 'Trustees/contact persons',
               groupId: 'trustee_group',
               children: const [],
             ),
