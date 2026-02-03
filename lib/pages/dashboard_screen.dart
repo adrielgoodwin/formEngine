@@ -26,12 +26,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   SortOption _currentSort = SortOption.newestUpdated;
   late TextEditingController _searchController;
 
-  /// Creates executor info and asset indicators for the case
+  /// Creates trustee info and asset indicators for the case
   Widget _buildCaseIndicators(CaseRecord caseRecord) {
     final formInstance = caseRecord.formInstance;
 
-    // Get executor instances for left side
-    final executorInstances = formInstance.getGroupInstances('executor_other_info');
+    // Get trustee instances for left side
+    final trusteeInstances = formInstance.getGroupInstances('trustee_group');
 
     // Count asset items for right side
     final rrspCount = formInstance.getGroupInstances('rrsp_account_group').length;
@@ -39,17 +39,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final nonRegCount = formInstance.getGroupInstances('nonreg_account_group').length;
     final otherAssetCount = formInstance.getGroupInstances('other_asset_group').length;
 
-    // Build executor widgets (left side)
-    final executorWidgets = <Widget>[];
-    for (int index = 0; index < executorInstances.length; index++) {
-      final executor = executorInstances[index];
-      final name = (executor.values['executor_name'] ?? '').toString();
-      final contact = (executor.values['executor_contact'] ?? '').toString();
+    // Build trustee widgets (left side)
+    final trusteeWidgets = <Widget>[];
+    for (int index = 0; index < trusteeInstances.length; index++) {
+      final trustee = trusteeInstances[index];
+      final name = (trustee.values['trustee_name'] ?? '').toString();
+      final contact = (trustee.values['trustee_contact'] ?? '').toString();
 
-      executorWidgets.add(
+      trusteeWidgets.add(
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          margin: EdgeInsets.only(right: index < executorInstances.length - 1 ? 8 : 0),
+          margin: EdgeInsets.only(right: index < trusteeInstances.length - 1 ? 8 : 0),
           decoration: BoxDecoration(
             color: const Color(0xFFFF9800).withOpacity(0.1),
             borderRadius: BorderRadius.circular(4),
@@ -121,10 +121,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Executors on the left
+        // Trustees on the left
         Row(
           mainAxisSize: MainAxisSize.min,
-          children: executorWidgets,
+          children: trusteeWidgets,
         ),
         // Assets on the right
         Row(

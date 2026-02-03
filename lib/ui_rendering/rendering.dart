@@ -64,90 +64,40 @@ Widget renderForm(AssembledForm form, BuildContext context) {
   final blockIds = form.blocks.map((block) => block.id).toList();
   _blockCollapseState.initializeBlocks(blockIds);
   
-  // Find first sticky block (only one supported)
-  final stickyBlockIndex = form.blocks.indexWhere((b) => b.formBlock.stickToTop);
-  final stickyBlock = stickyBlockIndex >= 0 ? form.blocks[stickyBlockIndex] : null;
-  
-  // All non-sticky blocks (maintaining original order, excluding the sticky one)
-  final nonStickyBlocks = form.blocks.where((b) => !b.formBlock.stickToTop).toList();
+  // Group blocks by column
+  final column1Blocks = form.blocks.where((b) => b.formBlock.column == 1).toList();
+  final column2Blocks = form.blocks.where((b) => b.formBlock.column == 2).toList();
+  final column3Blocks = form.blocks.where((b) => b.formBlock.column == 3).toList();
   
   return ChangeNotifierProvider.value(
     value: _blockCollapseState,
-    child: Column(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Fixed sticky block at top (if exists)
-        if (stickyBlock != null)
-          Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: renderBlock(stickyBlock, context),
-            ),
-          ),
-        
-        // Scrollable content below
+        // Column 1
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(3),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title and collapse button (only if no sticky block, otherwise it's redundant)
-                if (stickyBlock == null) ...[
-                  Text(form.title, style: const TextStyle(fontSize: 24)),
-                  const SizedBox(height: 16),
-                ],
-                // Collapse/Expand all button
-                Consumer<BlockCollapseState>(
-                  builder: (context, collapseState, child) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        children: [
-                          const Spacer(),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              if (collapseState.allExpanded()) {
-                                collapseState.collapseAll();
-                              } else {
-                                collapseState.expandAll();
-                              }
-                            },
-                            icon: Icon(
-                              collapseState.allExpanded() ? Icons.expand_more : Icons.expand_less,
-                            ),
-                            label: Text(
-                              collapseState.allExpanded() ? 'Collapse' : 'Expand',
-                              style: const TextStyle(color: Colors.black),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              minimumSize: const Size(120, 36),
-                              fixedSize: const Size(120, 36),
-                              elevation: 2,
-                              shadowColor: Colors.black26,
-                              surfaceTintColor: Colors.transparent,
-                              overlayColor: MaterialStateColor.resolveWith((states) {
-                                if (states.contains(MaterialState.pressed)) {
-                                  return Colors.transparent;
-                                }
-                                if (states.contains(MaterialState.hovered)) {
-                                  return Colors.black.withOpacity(0.04);
-                                }
-                                return Colors.transparent;
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                // All non-sticky blocks
-                ...nonStickyBlocks.map((block) => renderBlock(block, context)),
-                const SizedBox(height: 16),
-              ],
+              children: column1Blocks.map((block) => renderBlock(block, context)).toList(),
+            ),
+          ),
+        ),
+        // Column 2
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(3),
+            child: Column(
+              children: column2Blocks.map((block) => renderBlock(block, context)).toList(),
+            ),
+          ),
+        ),
+        // Column 3
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(3),
+            child: Column(
+              children: column3Blocks.map((block) => renderBlock(block, context)).toList(),
             ),
           ),
         ),
@@ -174,7 +124,6 @@ class CollapsibleBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BlockCollapseState>(
       builder: (context, collapseState, child) {
-        final isCollapsed = collapseState.isCollapsed(block.id);
         final isAssets = block.id == 'block_asset_details';
         final formBlock = block.formBlock;
         
@@ -201,10 +150,10 @@ class CollapsibleBlock extends StatelessWidget {
         }
 
         return Card(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          elevation: 1,
+          margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
             side: otherBorders ?? BorderSide.none,
           ),
           child: Container(
@@ -214,53 +163,21 @@ class CollapsibleBlock extends StatelessWidget {
                       left: leftBorder,
                     ),
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      bottomLeft: Radius.circular(8),
+                      topLeft: Radius.circular(4),
+                      bottomLeft: Radius.circular(4),
                     ),
                   )
                 : null,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(2),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header with title and collapse button
-                  Row(
-                    children: [
-                      // Add gravestone icon for deceased information
-                      if (block.id == 'block_deceased_information')
-                        Icon(
-                          Icons.bed,
-                          size: 20,
-                          color: Colors.red,
-                        ),
-                      if (block.id == 'block_deceased_information')
-                        const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          block.title, 
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          isCollapsed ? Icons.expand_more : Icons.expand_less,
-                          color: formBlock.getPrimaryColor(),
-                        ),
-                        onPressed: () {
-                          collapseState.toggleBlock(block.id);
-                        },
-                        tooltip: isCollapsed ? 'Expand' : 'Collapse',
-                      ),
-                    ],
-                  ),
-                  // Content (conditionally shown)
-                  if (!isCollapsed) ...[
-                    const SizedBox(height: 12),
-                    isAssets
-                        ? _renderAssetBlockLayout(block.layout, context)
-                        : renderLayout(block.layout, context),
-                  ],
+                  // Always show content (no headers)
+                  isAssets
+                      ? _renderAssetBlockLayout(block.layout, context)
+                      : renderLayout(block.layout, context),
                 ],
               ),
             ),
@@ -284,9 +201,9 @@ Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context) {
         for (var i = 0; i < children.length; i++) ...[
           _renderLayoutScoped(children[i], context, groupId: null, instanceId: null),
           if (i != children.length - 1) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 2),
             const Divider(thickness: 1, color: Colors.black12),
-            const SizedBox(height: 12),
+            const SizedBox(height: 2),
           ],
         ],
       ],
@@ -345,15 +262,15 @@ Widget _renderLayoutScoped(
         builder: (context, constraints) {
           final maxWidth = constraints.maxWidth;
 
-          if (maxWidth.isFinite && maxWidth < 720) {
+          if (maxWidth.isFinite && maxWidth < 500) {
             // Use Wrap on narrow widths so rows (notably RRN) don't collapse
             // into awkward spacing; still respects widthFraction.
             return Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 6,
+              runSpacing: 6,
               children: layout.children.map((child) {
                 final fraction = child is AssembledNode ? child.widthFraction : 1.0;
-                final width = (maxWidth * fraction).clamp(180.0, maxWidth);
+                final width = (maxWidth * fraction).clamp(200.0, maxWidth);
 
                 return SizedBox(
                   width: width,
@@ -374,7 +291,7 @@ Widget _renderLayoutScoped(
               return Expanded(
                 flex: _flexFromWidth(child),
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: 6),
                   child: _renderLayoutScoped(child, context,
                       groupId: groupId, instanceId: instanceId),
                 ),
@@ -390,7 +307,7 @@ Widget _renderLayoutScoped(
         children: layout.children
             .map(
               (child) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 1),
                 child: _renderLayoutScoped(child, context,
                     groupId: groupId, instanceId: instanceId),
               ),
@@ -439,7 +356,7 @@ Widget _renderLayoutScoped(
                   layout.label,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 2),
                 ...instances.asMap().entries.map((entry) {
               final inst = entry.value;
               final canDelete = def == null
@@ -453,7 +370,7 @@ Widget _renderLayoutScoped(
                 groupId: layout.groupId!,
               );
             }),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             TextButton.icon(
               onPressed: def != null &&
                       def.maxInstances != null &&
@@ -465,6 +382,9 @@ Widget _renderLayoutScoped(
               icon: const Icon(Icons.add),
               label: Text(addLabel),
               style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: const Size(0, 24),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 overlayColor: MaterialStateColor.resolveWith((states) {
                   if (states.contains(MaterialState.pressed)) {
                     return Colors.transparent;
@@ -500,7 +420,7 @@ Widget _renderLayoutScoped(
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
           ...instances.asMap().entries.map((entry) {
             final inst = entry.value;
             final canDelete = def == null
@@ -514,7 +434,7 @@ Widget _renderLayoutScoped(
               groupId: layout.groupId!,
             );
           }),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
           TextButton.icon(
             onPressed: def != null &&
                     def.maxInstances != null &&
@@ -526,6 +446,9 @@ Widget _renderLayoutScoped(
             icon: const Icon(Icons.add),
             label: Text(addLabel),
             style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: const Size(0, 24),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               overlayColor: MaterialStateColor.resolveWith((states) {
                 if (states.contains(MaterialState.pressed)) {
                   return Colors.transparent;
@@ -564,7 +487,7 @@ Widget _renderLayoutScoped(
                   layout.label,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 2),
                 ...layout.children.map((child) => _renderLayoutScoped(child, context,
                     groupId: groupId, instanceId: instanceId)),
               ],
@@ -574,23 +497,25 @@ Widget _renderLayoutScoped(
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  groupIcon,
-                  size: 20,
-                  color: layout.groupId == 'executor_other_info' 
-                      ? const Color(0xFFFF9800)
-                      : const Color(0xFF4CAF50),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  layout.label,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
+            if (layout.label.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(
+                    groupIcon,
+                    size: 20,
+                    color: layout.groupId == 'executor_other_info' 
+                        ? const Color(0xFFFF9800)
+                        : const Color(0xFF4CAF50),
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    layout.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 1),
+            ],
             ...layout.children.map((child) => _renderLayoutScoped(child, context,
                 groupId: groupId, instanceId: instanceId)),
           ],
@@ -649,18 +574,18 @@ class _DeletableGroupContainerState extends State<_DeletableGroupContainer> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.all(1),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.black12),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Stack(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8), // Space for the X button
+              const SizedBox(height: 2), // Space for the X button
               ...widget.layout.children.map(
                 (child) => _renderLayoutScoped(
                   child,
@@ -767,11 +692,15 @@ Widget renderTextInput(
     maxLines: node.multiLine ? null : 1,
     keyboardType: formatting.keyboardType(),
     inputFormatters: formatting.formatters(),
+    style: const TextStyle(fontSize: 13),
     decoration: InputDecoration(
       labelText: node.label,
+      labelStyle: const TextStyle(fontSize: 12),
       prefixText: formatting.prefixText(),
       hintText: profile == ValueProfile.dateDdMmYyyy ? 'dd/mm/yyyy' : null,
       errorText: null, // Disable built-in error text
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     ),
     onChanged: (text) {
       final canonical = parseCanonical(profile, text);
@@ -816,16 +745,14 @@ Widget renderTextInput(
     mainAxisSize: MainAxisSize.min,
     children: [
       textField,
-      SizedBox(
-        height: 16,
-        child: Visibility(
-          visible: errorText != null,
+      if (errorText != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
           child: Text(
-            errorText ?? '',
-            style: const TextStyle(color: Colors.red, fontSize: 12),
+            errorText,
+            style: const TextStyle(color: Colors.red, fontSize: 10),
           ),
         ),
-      ),
     ],
   );
 
@@ -852,6 +779,15 @@ Widget renderTextInput(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 220),
+        child: input,
+      ),
+    );
+  } else if (node.id.endsWith('_notes')) {
+    // RRN notes fields - allow wrapping only at 200px minimum
+    input = Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 200),
         child: input,
       ),
     );
@@ -892,11 +828,11 @@ Widget renderChoiceInput(ChoiceInputNode node, BuildContext context,
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(node.label),
-      const SizedBox(height: 6),
+      Text(node.label, style: const TextStyle(fontSize: 12)),
+      const SizedBox(height: 1),
       Wrap(
-        spacing: 16,
-        runSpacing: 8,
+        spacing: 6,
+        runSpacing: 1,
         children: List.generate(node.choiceLabels.length, (index) {
           return InkWell(
             onTap: () {

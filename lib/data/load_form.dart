@@ -41,17 +41,17 @@ List<LayoutItem> rrnChildren(String baseId) {
         LayoutNodeRef(
           id: '${baseId}_requested_ref',
           nodeId: '${baseId}_requested',
-          widthFraction: 0.2,
+          widthFraction: 0.12,
         ),
         LayoutNodeRef(
           id: '${baseId}_received_ref',
           nodeId: '${baseId}_received',
-          widthFraction: 0.2,
+          widthFraction: 0.12,
         ),
         LayoutNodeRef(
           id: '${baseId}_notes_ref',
           nodeId: '${baseId}_notes',
-          widthFraction: 0.6,
+          widthFraction: 0.76,
         ),
       ],
     ),
@@ -117,151 +117,151 @@ Future<FormDefinition> loadFormDefinition() async {
         multiLine: true,
       ),
 
-      // ===== Block 2 — Executor / Estate Trustee Information =====
-      'executor_name': TextInputNode(
-        id: 'executor_name',
+      // ===== Block 2 — Trustee and Contact Persons =====
+      'meeting_type': ChoiceInputNode(
+        id: 'meeting_type',
+        label: 'Meeting Type',
+        choiceLabels: ['In person', 'Telephone', 'Zoom'],
+        choiceCardinality: ChoiceCardinality.single,
+      ),
+      'meeting_attendees': ChoiceInputNode(
+        id: 'meeting_attendees',
+        label: 'Attendees',
+        choiceLabels: ['MM', 'DG', 'EL', 'Other'],
+        choiceCardinality: ChoiceCardinality.multiple,
+      ),
+      'meeting_other_attendees': TextInputNode(
+        id: 'meeting_other_attendees',
+        label: 'Other attendee',
+      ),
+      'trustee_name': TextInputNode(
+        id: 'trustee_name',
         label: 'Full Name',
       ),
-      'executor_address': TextInputNode(
-        id: 'executor_address',
+      'trustee_relationship': TextInputNode(
+        id: 'trustee_relationship',
+        label: 'Relationship to deceased',
+      ),
+      'trustee_address': TextInputNode(
+        id: 'trustee_address',
         label: 'Address',
         multiLine: true,
       ),
-      'executor_contact': TextInputNode(
-        id: 'executor_contact',
+      'trustee_contact': TextInputNode(
+        id: 'trustee_contact',
         label: 'Contact Info (email / phone)',
       ),
-      'executor_wants_compensation': ChoiceInputNode(
-        id: 'executor_wants_compensation',
-        label: 'Executor Compensation',
+      'trustee_wants_compensation': ChoiceInputNode(
+        id: 'trustee_wants_compensation',
+        label: 'Trustee Compensation',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'executor_sin': TextInputNode(
-        id: 'executor_sin',
+      'trustee_sin': TextInputNode(
+        id: 'trustee_sin',
         label: 'SIN',
       ),
-      'executor_income_notes': TextInputNode(
-        id: 'executor_income_notes',
+      'trustee_income_notes': TextInputNode(
+        id: 'trustee_income_notes',
         label: 'Income Notes',
         multiLine: true,
       ),
-
-      // ===== Block 3 — Other Professionals =====
-      'professionals_involved': ChoiceInputNode(
-        id: 'professionals_involved',
-        label: 'Other professionals involved',
-        choiceLabels: ['Lawyer', 'Investment Advisor'],
-        choiceCardinality: ChoiceCardinality.multiple,
+      'trustee_is_other_person': ChoiceInputNode(
+        id: 'trustee_is_other_person',
+        label: 'Other person?',
+        choiceLabels: ['Yes', 'No'],
+        choiceCardinality: ChoiceCardinality.single,
       ),
-      'lawyer_firm_phone': TextInputNode(
-        id: 'lawyer_firm_phone',
-        label: 'Firm Phone',
-      ),
-      'lawyer_firm_email': TextInputNode(
-        id: 'lawyer_firm_email',
-        label: 'Firm Email',
-      ),
-      'lawyer_rep_phone': TextInputNode(
-        id: 'lawyer_rep_phone',
-        label: 'Rep Phone',
-      ),
-      'lawyer_rep_email': TextInputNode(
-        id: 'lawyer_rep_email',
-        label: 'Rep Email',
-      ),
-      'lawyer_name': TextInputNode(
-        id: 'lawyer_name',
-        label: 'Name',
-      ),
-      'advisor_firm_phone': TextInputNode(
-        id: 'advisor_firm_phone',
-        label: 'Firm Phone',
-      ),
-      'advisor_firm_email': TextInputNode(
-        id: 'advisor_firm_email',
-        label: 'Firm Email',
-      ),
-      'advisor_rep_phone': TextInputNode(
-        id: 'advisor_rep_phone',
-        label: 'Rep Phone',
-      ),
-      'advisor_rep_email': TextInputNode(
-        id: 'advisor_rep_email',
-        label: 'Rep Email',
-      ),
-      'advisor_name': TextInputNode(
-        id: 'advisor_name',
-        label: 'Name',
+      'trustee_relationship_to_trustee': TextInputNode(
+        id: 'trustee_relationship_to_trustee',
+        label: 'Relationship to trustee',
       ),
 
-      // ===== Block 4 — Things to Retrieve (RRN, non-repeatable) =====
-      'retrieve_death_cert_requested': ChoiceInputNode(
-        id: 'retrieve_death_cert_requested',
+      // ===== Block 3 — Other Professionals (Repeatable) =====
+      'professional_profession': TextInputNode(
+        id: 'professional_profession',
+        label: 'Profession',
+      ),
+      'professional_name': TextInputNode(
+        id: 'professional_name',
+        label: 'Name',
+      ),
+      'professional_email': TextInputNode(
+        id: 'professional_email',
+        label: 'Email',
+      ),
+      'professional_phone': TextInputNode(
+        id: 'professional_phone',
+        label: 'Phone',
+      ),
+
+      // ===== Block 4 — Documents (RRN) =====
+      'docs_death_cert_requested': ChoiceInputNode(
+        id: 'docs_death_cert_requested',
         label: 'Requested',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_death_cert_received': ChoiceInputNode(
-        id: 'retrieve_death_cert_received',
+      'docs_death_cert_received': ChoiceInputNode(
+        id: 'docs_death_cert_received',
         label: 'Received',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_death_cert_notes': TextInputNode(
-        id: 'retrieve_death_cert_notes',
+      'docs_death_cert_notes': TextInputNode(
+        id: 'docs_death_cert_notes',
         label: 'Notes',
         multiLine: true,
       ),
-      'retrieve_will_requested': ChoiceInputNode(
-        id: 'retrieve_will_requested',
+      'docs_will_requested': ChoiceInputNode(
+        id: 'docs_will_requested',
         label: 'Requested',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_will_received': ChoiceInputNode(
-        id: 'retrieve_will_received',
+      'docs_will_received': ChoiceInputNode(
+        id: 'docs_will_received',
         label: 'Received',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_will_notes': TextInputNode(
-        id: 'retrieve_will_notes',
+      'docs_will_notes': TextInputNode(
+        id: 'docs_will_notes',
         label: 'Notes',
         multiLine: true,
       ),
-      'retrieve_assets_requested': ChoiceInputNode(
-        id: 'retrieve_assets_requested',
+      'docs_probate_requested': ChoiceInputNode(
+        id: 'docs_probate_requested',
         label: 'Requested',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_assets_received': ChoiceInputNode(
-        id: 'retrieve_assets_received',
+      'docs_probate_received': ChoiceInputNode(
+        id: 'docs_probate_received',
         label: 'Received',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_assets_notes': TextInputNode(
-        id: 'retrieve_assets_notes',
+      'docs_probate_notes': TextInputNode(
+        id: 'docs_probate_notes',
         label: 'Notes',
         multiLine: true,
       ),
-      'retrieve_estate_return_requested': ChoiceInputNode(
-        id: 'retrieve_estate_return_requested',
+      'docs_assets_requested': ChoiceInputNode(
+        id: 'docs_assets_requested',
         label: 'Requested',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_estate_return_received': ChoiceInputNode(
-        id: 'retrieve_estate_return_received',
+      'docs_assets_received': ChoiceInputNode(
+        id: 'docs_assets_received',
         label: 'Received',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'retrieve_estate_return_notes': TextInputNode(
-        id: 'retrieve_estate_return_notes',
-        label: 'Notes',
+      'docs_assets_notes': TextInputNode(
+        id: 'docs_assets_notes',
+        label: 'Joint ownerships, named beneficiaries, beneficial ownerships, recent transfers',
         multiLine: true,
       ),
 
@@ -294,15 +294,13 @@ Future<FormDefinition> loadFormDefinition() async {
         multiLine: true,
       ),
 
+      'nonreg_value_at_death': TextInputNode(
+        id: 'nonreg_value_at_death',
+        label: 'Value at death',
+      ),
       'nonreg_gain_loss': TextInputNode(
         id: 'nonreg_gain_loss',
         label: 'Unrealized gain / loss at death',
-      ),
-      'nonreg_has_dividends': ChoiceInputNode(
-        id: 'nonreg_has_dividends',
-        label: 'Dividends?',
-        choiceLabels: ['Yes', 'No'],
-        choiceCardinality: ChoiceCardinality.single,
       ),
       'nonreg_yod_requested': ChoiceInputNode(
         id: 'nonreg_yod_requested',
@@ -339,8 +337,21 @@ Future<FormDefinition> loadFormDefinition() async {
         multiLine: true,
       ),
 
-      'shares_notes': TextInputNode(
-        id: 'shares_notes',
+      'share_company_name': TextInputNode(
+        id: 'share_company_name',
+        label: 'Company name',
+      ),
+      'share_number_of_shares': TextInputNode(
+        id: 'share_number_of_shares',
+        label: 'Number of shares',
+      ),
+      'share_notes': TextInputNode(
+        id: 'share_notes',
+        label: 'History, DRIP, Reinvested, Cash',
+        multiLine: true,
+      ),
+      'asset_notes': TextInputNode(
+        id: 'asset_notes',
         label: 'Notes',
         multiLine: true,
       ),
@@ -382,6 +393,17 @@ Future<FormDefinition> loadFormDefinition() async {
         label: "What's happening",
         multiLine: true,
       ),
+      'realestate_principal_all_years': ChoiceInputNode(
+        id: 'realestate_principal_all_years',
+        label: 'Principal residence for all years owned?',
+        choiceLabels: ['Yes', 'No'],
+        choiceCardinality: ChoiceCardinality.single,
+      ),
+      'realestate_principal_all_years_notes': TextInputNode(
+        id: 'realestate_principal_all_years_notes',
+        label: 'Notes',
+        multiLine: true,
+      ),
       'realestate_other_year_of_purchase': TextInputNode(
         id: 'realestate_other_year_of_purchase',
         label: 'Year of Purchase',
@@ -394,14 +416,14 @@ Future<FormDefinition> loadFormDefinition() async {
         id: 'realestate_other_value_at_death',
         label: 'Value at Death',
       ),
-      'realestate_other_ownership_history_notes': TextInputNode(
-        id: 'realestate_other_ownership_history_notes',
-        label: 'Ownership History',
+      'realestate_capital_improvements': TextInputNode(
+        id: 'realestate_capital_improvements',
+        label: 'Capital improvements',
         multiLine: true,
       ),
-      'realestate_other_significant_improvements_notes': TextInputNode(
-        id: 'realestate_other_significant_improvements_notes',
-        label: 'Significant Improvements',
+      'realestate_ownership_tax_history': TextInputNode(
+        id: 'realestate_ownership_tax_history',
+        label: 'Ownership / tax history (1994 election, 1972 FMV / RTC)',
         multiLine: true,
       ),
       'realestate_other_whats_happening_notes': TextInputNode(
@@ -427,148 +449,224 @@ Future<FormDefinition> loadFormDefinition() async {
 
       // Real estate (repeatable group will reuse these node IDs)
 
-      // ===== Block 6 — Other Documents (RRN, non-repeatable) =====
-      'docs_tax_returns_requested': ChoiceInputNode(
-        id: 'docs_tax_returns_requested',
-        label: 'Requested',
-        choiceLabels: ['Yes'],
+      // ===== Block 6 — Tax History =====
+      'tax_gph_client': ChoiceInputNode(
+        id: 'tax_gph_client',
+        label: 'GPH Client?',
+        choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'docs_tax_returns_received': ChoiceInputNode(
-        id: 'docs_tax_returns_received',
-        label: 'Received',
-        choiceLabels: ['Yes'],
-        choiceCardinality: ChoiceCardinality.single,
-      ),
-      'docs_tax_returns_notes': TextInputNode(
-        id: 'docs_tax_returns_notes',
+      'tax_gph_notes': TextInputNode(
+        id: 'tax_gph_notes',
         label: 'Notes',
         multiLine: true,
       ),
-      'docs_donations_requested': ChoiceInputNode(
-        id: 'docs_donations_requested',
+      'tax_returns_requested': ChoiceInputNode(
+        id: 'tax_returns_requested',
         label: 'Requested',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'docs_donations_received': ChoiceInputNode(
-        id: 'docs_donations_received',
+      'tax_returns_received': ChoiceInputNode(
+        id: 'tax_returns_received',
         label: 'Received',
         choiceLabels: ['Yes'],
         choiceCardinality: ChoiceCardinality.single,
       ),
-      'docs_donations_notes': TextInputNode(
-        id: 'docs_donations_notes',
+      'tax_returns_notes': TextInputNode(
+        id: 'tax_returns_notes',
         label: 'Notes',
         multiLine: true,
       ),
-      'docs_medical_receipts_requested': ChoiceInputNode(
-        id: 'docs_medical_receipts_requested',
-        label: 'Requested',
-        choiceLabels: ['Yes'],
-        choiceCardinality: ChoiceCardinality.single,
+      'tax_income_types': ChoiceInputNode(
+        id: 'tax_income_types',
+        label: 'Income Types',
+        choiceLabels: ['CPP', 'T4', 'OAS', 'T5', 'T3', 'Foreign Pension', 'T4A', 'RRIF', 'Other'],
+        choiceCardinality: ChoiceCardinality.multiple,
       ),
-      'docs_medical_receipts_received': ChoiceInputNode(
-        id: 'docs_medical_receipts_received',
-        label: 'Received',
-        choiceLabels: ['Yes'],
-        choiceCardinality: ChoiceCardinality.single,
+      'tax_income_notes': TextInputNode(
+        id: 'tax_income_notes',
+        label: 'Notes',
+        multiLine: true,
       ),
-      'docs_medical_receipts_notes': TextInputNode(
-        id: 'docs_medical_receipts_notes',
+      'tax_credits': ChoiceInputNode(
+        id: 'tax_credits',
+        label: 'Tax Credits',
+        choiceLabels: ['Donations', 'Medical', 'Other'],
+        choiceCardinality: ChoiceCardinality.multiple,
+      ),
+      'tax_credits_notes': TextInputNode(
+        id: 'tax_credits_notes',
         label: 'Notes',
         multiLine: true,
       ),
     },
     groups: {
 
-      'executor_other_info': NodeGroupDefinition(
-        id: 'executor_other_info',
-        label: 'Executor',
+      'trustee_group': NodeGroupDefinition(
+        id: 'trustee_group',
+        label: 'Trustee',
         repeatable: true,
         minInstances: 1,
         children: [
           LayoutRow(
-            id: 'executor_other_row_1',
+            id: 'trustee_row_1',
             children: [
               LayoutNodeRef(
-                id: 'executor_other_full_name_ref',
-                nodeId: 'executor_name',
-                widthFraction: 0.3,
-              ),
-              LayoutNodeRef(
-                id: 'executor_other_contact_ref',
-                nodeId: 'executor_contact',
+                id: 'trustee_name_ref',
+                nodeId: 'trustee_name',
                 widthFraction: 0.4,
               ),
               LayoutNodeRef(
-                id: 'executor_other_compensation_ref',
-                nodeId: 'executor_wants_compensation',
+                id: 'trustee_relationship_ref',
+                nodeId: 'trustee_relationship',
+                widthFraction: 0.3,
+              ),
+              LayoutNodeRef(
+                id: 'trustee_contact_ref',
+                nodeId: 'trustee_contact',
                 widthFraction: 0.3,
               ),
             ],
           ),
           LayoutNodeRef(
-            id: 'executor_other_address_ref',
-            nodeId: 'executor_address',
+            id: 'trustee_address_ref',
+            nodeId: 'trustee_address',
             widthFraction: 1.0,
           ),
+          LayoutRow(
+            id: 'trustee_row_2',
+            children: [
+              LayoutNodeRef(
+                id: 'trustee_compensation_ref',
+                nodeId: 'trustee_wants_compensation',
+                widthFraction: 0.3,
+              ),
+              LayoutNodeRef(
+                id: 'trustee_other_person_ref',
+                nodeId: 'trustee_is_other_person',
+                widthFraction: 0.3,
+              ),
+            ],
+          ),
           LayoutGroup(
-            id: 'executor_compensation_details_group',
+            id: 'trustee_compensation_details_group',
             label: 'Compensation Details',
             visibilityCondition: const ChoiceEqualsCondition(
-              nodeId: 'executor_wants_compensation',
+              nodeId: 'trustee_wants_compensation',
               choiceIndex: 0,
               expectedValue: true,
             ),
             children: [
               LayoutRow(
-                id: 'executor_compensation_details_row',
+                id: 'trustee_compensation_details_row',
                 children: [
                   LayoutNodeRef(
-                    id: 'executor_compensation_sin_ref',
-                    nodeId: 'executor_sin',
+                    id: 'trustee_sin_ref',
+                    nodeId: 'trustee_sin',
                     widthFraction: 0.3,
                   ),
                   LayoutNodeRef(
-                    id: 'executor_compensation_income_notes_ref',
-                    nodeId: 'executor_income_notes',
+                    id: 'trustee_income_notes_ref',
+                    nodeId: 'trustee_income_notes',
                     widthFraction: 0.7,
                   ),
                 ],
               ),
             ],
           ),
+          LayoutGroup(
+            id: 'trustee_other_person_details_group',
+            label: '',
+            visibilityCondition: const ChoiceEqualsCondition(
+              nodeId: 'trustee_is_other_person',
+              choiceIndex: 0,
+              expectedValue: true,
+            ),
+            children: [
+              LayoutNodeRef(
+                id: 'trustee_relationship_to_trustee_ref',
+                nodeId: 'trustee_relationship_to_trustee',
+                widthFraction: 1.0,
+              ),
+            ],
+          ),
         ],
       ),
 
-      'retrieve_death_cert_rrn': NodeGroupDefinition(
-        id: 'retrieve_death_cert_rrn',
+      'professional_group': NodeGroupDefinition(
+        id: 'professional_group',
+        label: 'Professional',
+        repeatable: true,
+        minInstances: 0,
+        children: [
+          LayoutRow(
+            id: 'professional_row_1',
+            children: [
+              LayoutNodeRef(
+                id: 'professional_profession_ref',
+                nodeId: 'professional_profession',
+                widthFraction: 0.4,
+              ),
+              LayoutNodeRef(
+                id: 'professional_name_ref',
+                nodeId: 'professional_name',
+                widthFraction: 0.6,
+              ),
+            ],
+          ),
+          LayoutRow(
+            id: 'professional_row_2',
+            children: [
+              LayoutNodeRef(
+                id: 'professional_email_ref',
+                nodeId: 'professional_email',
+                widthFraction: 0.5,
+              ),
+              LayoutNodeRef(
+                id: 'professional_phone_ref',
+                nodeId: 'professional_phone',
+                widthFraction: 0.5,
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      'docs_death_cert_rrn': NodeGroupDefinition(
+        id: 'docs_death_cert_rrn',
         label: 'Death Certificate',
         repeatable: false,
         minInstances: 1,
-        children: rrnChildren('retrieve_death_cert'),
+        children: rrnChildren('docs_death_cert'),
       ),
-      'retrieve_will_rrn': NodeGroupDefinition(
-        id: 'retrieve_will_rrn',
-        label: 'Will / Certificate of Appointment',
+      'docs_will_rrn': NodeGroupDefinition(
+        id: 'docs_will_rrn',
+        label: 'Will',
         repeatable: false,
         minInstances: 1,
-        children: rrnChildren('retrieve_will'),
+        children: rrnChildren('docs_will'),
       ),
-      'retrieve_assets_rrn': NodeGroupDefinition(
-        id: 'retrieve_assets_rrn',
-        label: 'List of Assets',
+      'docs_probate_rrn': NodeGroupDefinition(
+        id: 'docs_probate_rrn',
+        label: 'Probate',
         repeatable: false,
         minInstances: 1,
-        children: rrnChildren('retrieve_assets'),
+        children: rrnChildren('docs_probate'),
       ),
-      'retrieve_estate_return_rrn': NodeGroupDefinition(
-        id: 'retrieve_estate_return_rrn',
-        label: 'Estate Information Return',
+      'docs_assets_rrn': NodeGroupDefinition(
+        id: 'docs_assets_rrn',
+        label: 'Complete List of Assets',
         repeatable: false,
         minInstances: 1,
-        children: rrnChildren('retrieve_estate_return'),
+        children: rrnChildren('docs_assets'),
+      ),
+      'tax_returns_rrn': NodeGroupDefinition(
+        id: 'tax_returns_rrn',
+        label: 'Tax returns – previous 2 years',
+        repeatable: false,
+        minInstances: 1,
+        children: rrnChildren('tax_returns'),
       ),
 
       'rrsp_liquidation': NodeGroupDefinition(
@@ -580,14 +678,14 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'nonreg_yod': NodeGroupDefinition(
         id: 'nonreg_yod',
-        label: 'Monthly statements (year of death)',
+        label: 'Statements, year of death',
         repeatable: false,
         minInstances: 1,
         children: rrnChildren('nonreg_yod'),
       ),
       'nonreg_liquidation': NodeGroupDefinition(
         id: 'nonreg_liquidation',
-        label: 'Monthly statements (to liquidation)',
+        label: 'Statements, to liquidation',
         repeatable: false,
         minInstances: 1,
         children: rrnChildren('nonreg_liquidation'),
@@ -667,35 +765,30 @@ Future<FormDefinition> loadFormDefinition() async {
             id: 'nonreg_row',
             children: [
               LayoutNodeRef(
+                id: 'nonreg_value_at_death_ref',
+                nodeId: 'nonreg_value_at_death',
+                widthFraction: 0.35,
+              ),
+              LayoutNodeRef(
                 id: 'nonreg_gain_loss_ref',
                 nodeId: 'nonreg_gain_loss',
                 widthFraction: 0.65,
               ),
-              LayoutNodeRef(
-                id: 'nonreg_dividends_ref',
-                nodeId: 'nonreg_has_dividends',
-                widthFraction: 0.35,
-              ),
             ],
           ),
           LayoutGroup(
-            id: 'nonreg_dividends_yes_group',
-            label: 'Monthly Statements',
-            visibilityCondition: const ChoiceEqualsCondition(
-              nodeId: 'nonreg_has_dividends',
-              choiceIndex: 0,
-              expectedValue: true,
-            ),
+            id: 'nonreg_statements_group',
+            label: '',
             children: [
               LayoutGroup(
                 id: 'nonreg_year_of_death_statements_group',
-                label: 'Monthly statements (year of death)',
+                label: 'Statements, year of death',
                 groupId: 'nonreg_yod',
                 children: const [],
               ),
               LayoutGroup(
                 id: 'nonreg_to_liquidation_statements_group',
-                label: 'Monthly statements (to liquidation)',
+                label: 'Statements, to liquidation',
                 groupId: 'nonreg_liquidation',
                 children: const [],
               ),
@@ -704,9 +797,38 @@ Future<FormDefinition> loadFormDefinition() async {
         ],
       ),
 
+      'share_certificate_group': NodeGroupDefinition(
+        id: 'share_certificate_group',
+        label: 'Share Certificate',
+        repeatable: true,
+        minInstances: 0,
+        children: [
+          LayoutRow(
+            id: 'share_certificate_row_1',
+            children: [
+              LayoutNodeRef(
+                id: 'share_company_name_ref',
+                nodeId: 'share_company_name',
+                widthFraction: 0.6,
+              ),
+              LayoutNodeRef(
+                id: 'share_number_of_shares_ref',
+                nodeId: 'share_number_of_shares',
+                widthFraction: 0.4,
+              ),
+            ],
+          ),
+          LayoutNodeRef(
+            id: 'share_notes_ref',
+            nodeId: 'share_notes',
+            widthFraction: 1.0,
+          ),
+        ],
+      ),
+
       'asset_group': NodeGroupDefinition(
         id: 'asset_group',
-        label: 'Other Assets',
+        label: 'Other Asset',
         repeatable: true,
         minInstances: 0,
         children: [
@@ -714,16 +836,21 @@ Future<FormDefinition> loadFormDefinition() async {
             id: 'other_assets_row',
             children: [
               LayoutNodeRef(
-                id: 'asset_description_ref',
-                nodeId: 'asset_description',
-                widthFraction: 0.7,
-              ),
-              LayoutNodeRef(
                 id: 'asset_value_ref',
                 nodeId: 'asset_value',
                 widthFraction: 0.3,
               ),
+              LayoutNodeRef(
+                id: 'asset_description_ref',
+                nodeId: 'asset_description',
+                widthFraction: 0.7,
+              ),
             ],
+          ),
+          LayoutNodeRef(
+            id: 'asset_notes_ref',
+            nodeId: 'asset_notes',
+            widthFraction: 1.0,
           ),
         ],
       ),
@@ -746,7 +873,7 @@ Future<FormDefinition> loadFormDefinition() async {
           ),
           LayoutGroup(
             id: 'realestate_principal_details_group',
-            label: 'Principal Residence Details',
+            label: '',
             visibilityCondition: const ChoiceEqualsCondition(
               nodeId: 'realestate_is_principal',
               choiceIndex: 0,
@@ -759,17 +886,38 @@ Future<FormDefinition> loadFormDefinition() async {
                   LayoutNodeRef(
                     id: 'realestate_principal_year_ref',
                     nodeId: 'realestate_principal_year',
-                    widthFraction: 0.3,
+                    widthFraction: 0.5,
                   ),
                   LayoutNodeRef(
                     id: 'realestate_principal_value_ref',
                     nodeId: 'realestate_principal_value',
-                    widthFraction: 0.3,
+                    widthFraction: 0.5,
                   ),
+                ],
+              ),
+              LayoutNodeRef(
+                id: 'realestate_principal_whats_happening_ref',
+                nodeId: 'realestate_principal_notes',
+                widthFraction: 1.0,
+              ),
+              LayoutNodeRef(
+                id: 'realestate_principal_all_years_ref',
+                nodeId: 'realestate_principal_all_years',
+                widthFraction: 1.0,
+              ),
+              LayoutGroup(
+                id: 'realestate_principal_all_years_no_group',
+                label: '',
+                visibilityCondition: const ChoiceEqualsCondition(
+                  nodeId: 'realestate_principal_all_years',
+                  choiceIndex: 1,
+                  expectedValue: true,
+                ),
+                children: [
                   LayoutNodeRef(
-                    id: 'realestate_principal_whats_happening_ref',
-                    nodeId: 'realestate_principal_notes',
-                    widthFraction: 0.4,
+                    id: 'realestate_principal_all_years_notes_ref',
+                    nodeId: 'realestate_principal_all_years_notes',
+                    widthFraction: 1.0,
                   ),
                 ],
               ),
@@ -777,7 +925,7 @@ Future<FormDefinition> loadFormDefinition() async {
           ),
           LayoutGroup(
             id: 'realestate_other_details_group',
-            label: 'Non-Principal Residence Details',
+            label: '',
             visibilityCondition: const ChoiceEqualsCondition(
               nodeId: 'realestate_is_principal',
               choiceIndex: 1,
@@ -804,20 +952,15 @@ Future<FormDefinition> loadFormDefinition() async {
                   ),
                 ],
               ),
-              LayoutRow(
-                id: 'realestate_other_row_2',
-                children: [
-                  LayoutNodeRef(
-                    id: 'realestate_other_ownership_history_ref',
-                    nodeId: 'realestate_other_ownership_history_notes',
-                    widthFraction: 0.5,
-                  ),
-                  LayoutNodeRef(
-                    id: 'realestate_other_improvements_ref',
-                    nodeId: 'realestate_other_significant_improvements_notes',
-                    widthFraction: 0.5,
-                  ),
-                ],
+              LayoutNodeRef(
+                id: 'realestate_capital_improvements_ref',
+                nodeId: 'realestate_capital_improvements',
+                widthFraction: 1.0,
+              ),
+              LayoutNodeRef(
+                id: 'realestate_ownership_tax_history_ref',
+                nodeId: 'realestate_ownership_tax_history',
+                widthFraction: 1.0,
               ),
               LayoutNodeRef(
                 id: 'realestate_other_whats_happening_ref',
@@ -829,27 +972,6 @@ Future<FormDefinition> loadFormDefinition() async {
         ],
       ),
 
-      'docs_tax_returns_rrn': NodeGroupDefinition(
-        id: 'docs_tax_returns_rrn',
-        label: 'Prior two years tax returns',
-        repeatable: false,
-        minInstances: 1,
-        children: rrnChildren('docs_tax_returns'),
-      ),
-      'docs_donations_rrn': NodeGroupDefinition(
-        id: 'docs_donations_rrn',
-        label: 'Donations',
-        repeatable: false,
-        minInstances: 1,
-        children: rrnChildren('docs_donations'),
-      ),
-      'docs_medical_receipts_rrn': NodeGroupDefinition(
-        id: 'docs_medical_receipts_rrn',
-        label: 'Medical receipts',
-        repeatable: false,
-        minInstances: 1,
-        children: rrnChildren('docs_medical_receipts'),
-      ),
     },
     blocks: [
       FormBlock(
@@ -857,7 +979,7 @@ Future<FormDefinition> loadFormDefinition() async {
         title: 'Deceased Information',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.deceased,
-        stickToTop: true,
+        column: 1,
         layout: LayoutColumn(
           id: 'deceased_information_root',
           children: [
@@ -886,49 +1008,44 @@ Future<FormDefinition> loadFormDefinition() async {
                 ),
               ],
             ),
-            LayoutRow(
-              id: 'deceased_row_2',
+            LayoutNodeRef(
+              id: 'deceased_marital_status_ref',
+              nodeId: 'deceased_marital_status',
+              widthFraction: 1.0,
+            ),
+            LayoutGroup(
+              id: 'partner_info_group',
+              label: 'Partner Info',
+              visibilityCondition: const ChoiceAnyOfCondition(
+                nodeId: 'deceased_marital_status',
+                choiceIndices: [0, 1], // Married and Common-law
+                expectedValue: true,
+              ),
               children: [
-                LayoutNodeRef(
-                  id: 'deceased_marital_status_ref',
-                  nodeId: 'deceased_marital_status',
-                  widthFraction: 0.35,
-                ),
-                LayoutGroup(
-                  id: 'partner_info_group',
-                  label: 'Partner Info',
-                  visibilityCondition: const ChoiceAnyOfCondition(
-                    nodeId: 'deceased_marital_status',
-                    choiceIndices: [0, 1], // Married and Common-law
-                    expectedValue: true,
-                  ),
+                LayoutRow(
+                  id: 'partner_row',
                   children: [
-                    LayoutRow(
-                      id: 'partner_row',
-                      children: [
-                        LayoutNodeRef(
-                          id: 'partner_full_name_ref',
-                          nodeId: 'partner_name',
-                          widthFraction: 0.4,
-                        ),
-                        LayoutNodeRef(
-                          id: 'partner_dob_ref',
-                          nodeId: 'partner_dob',
-                          widthFraction: 0.3,
-                        ),
-                        LayoutNodeRef(
-                          id: 'partner_sin_ref',
-                          nodeId: 'partner_sin',
-                          widthFraction: 0.3,
-                        ),
-                      ],
+                    LayoutNodeRef(
+                      id: 'partner_full_name_ref',
+                      nodeId: 'partner_name',
+                      widthFraction: 0.4,
                     ),
                     LayoutNodeRef(
-                      id: 'partner_address_ref',
-                      nodeId: 'partner_address',
-                      widthFraction: 1.0,
+                      id: 'partner_dob_ref',
+                      nodeId: 'partner_dob',
+                      widthFraction: 0.3,
+                    ),
+                    LayoutNodeRef(
+                      id: 'partner_sin_ref',
+                      nodeId: 'partner_sin',
+                      widthFraction: 0.3,
                     ),
                   ],
+                ),
+                LayoutNodeRef(
+                  id: 'partner_address_ref',
+                  nodeId: 'partner_address',
+                  widthFraction: 1.0,
                 ),
               ],
             ),
@@ -942,17 +1059,49 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
 
       FormBlock(
-        id: 'block_executor_estate_trustee_information',
-        title: 'Executor / Estate Trustee Information',
+        id: 'block_trustee_contact_persons',
+        title: 'Trustee and Contact Persons',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.executor,
+        column: 1,
         layout: LayoutColumn(
-          id: 'executor_root',
+          id: 'trustee_root',
           children: [
+            LayoutNodeRef(
+              id: 'meeting_type_ref',
+              nodeId: 'meeting_type',
+              widthFraction: 1.0,
+            ),
+            LayoutRow(
+              id: 'meeting_attendees_row',
+              children: [
+                LayoutNodeRef(
+                  id: 'meeting_attendees_ref',
+                  nodeId: 'meeting_attendees',
+                  widthFraction: 1.0,
+                ),
+              ],
+            ),
             LayoutGroup(
-              id: 'executor_group',
-              label: 'Executors',
-              groupId: 'executor_other_info',
+              id: 'meeting_other_attendees_group',
+              label: '',
+              visibilityCondition: const ChoiceAnyOfCondition(
+                nodeId: 'meeting_attendees',
+                choiceIndices: [3], // 'Other' choice
+                expectedValue: true,
+              ),
+              children: [
+                LayoutNodeRef(
+                  id: 'meeting_other_attendees_ref',
+                  nodeId: 'meeting_other_attendees',
+                  widthFraction: 1.0,
+                ),
+              ],
+            ),
+            LayoutGroup(
+              id: 'trustee_repeatable_group',
+              label: 'Trustees',
+              groupId: 'trustee_group',
               children: const [],
             ),
           ],
@@ -964,146 +1113,123 @@ Future<FormDefinition> loadFormDefinition() async {
         title: 'Other Professionals',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.professional,
+        column: 2,
         layout: LayoutColumn(
           id: 'other_professionals_root',
           children: [
-            LayoutNodeRef(
-              id: 'other_professionals_involved_ref',
-              nodeId: 'professionals_involved',
-              widthFraction: 1.0,
-            ),
-            LayoutRow(
-              id: 'professionals_row',
-              children: [
-                LayoutGroup(
-                  id: 'lawyer_group',
-                  label: 'Lawyer',
-                  visibilityCondition: const ChoiceEqualsCondition(
-                    nodeId: 'professionals_involved',
-                    choiceIndex: 0,
-                    expectedValue: true,
-                  ),
-                  children: [
-                    LayoutNodeRef(
-                      id: 'lawyer_name_ref',
-                      nodeId: 'lawyer_name',
-                      widthFraction: 1.0,
-                    ),
-                    LayoutRow(
-                      id: 'lawyer_firm_contact_row',
-                      children: [
-                        LayoutNodeRef(
-                          id: 'lawyer_firm_phone_ref',
-                          nodeId: 'lawyer_firm_phone',
-                          widthFraction: 0.5,
-                        ),
-                        LayoutNodeRef(
-                          id: 'lawyer_firm_email_ref',
-                          nodeId: 'lawyer_firm_email',
-                          widthFraction: 0.5,
-                        ),
-                      ],
-                    ),
-                    LayoutRow(
-                      id: 'lawyer_rep_contact_row',
-                      children: [
-                        LayoutNodeRef(
-                          id: 'lawyer_rep_phone_ref',
-                          nodeId: 'lawyer_rep_phone',
-                          widthFraction: 0.5,
-                        ),
-                        LayoutNodeRef(
-                          id: 'lawyer_rep_email_ref',
-                          nodeId: 'lawyer_rep_email',
-                          widthFraction: 0.5,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                LayoutGroup(
-                  id: 'advisor_group',
-                  label: 'Investment Advisor',
-                  visibilityCondition: const ChoiceEqualsCondition(
-                    nodeId: 'professionals_involved',
-                    choiceIndex: 1,
-                    expectedValue: true,
-                  ),
-                  children: [
-                    LayoutNodeRef(
-                      id: 'advisor_name_ref',
-                      nodeId: 'advisor_name',
-                      widthFraction: 1.0,
-                    ),
-                    LayoutRow(
-                      id: 'advisor_firm_contact_row',
-                      children: [
-                        LayoutNodeRef(
-                          id: 'advisor_firm_phone_ref',
-                          nodeId: 'advisor_firm_phone',
-                          widthFraction: 0.5,
-                        ),
-                        LayoutNodeRef(
-                          id: 'advisor_firm_email_ref',
-                          nodeId: 'advisor_firm_email',
-                          widthFraction: 0.5,
-                        ),
-                      ],
-                    ),
-                    LayoutRow(
-                      id: 'advisor_rep_contact_row',
-                      children: [
-                        LayoutNodeRef(
-                          id: 'advisor_rep_phone_ref',
-                          nodeId: 'advisor_rep_phone',
-                          widthFraction: 0.5,
-                        ),
-                        LayoutNodeRef(
-                          id: 'advisor_rep_email_ref',
-                          nodeId: 'advisor_rep_email',
-                          widthFraction: 0.5,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+            LayoutGroup(
+              id: 'professionals_repeatable_group',
+              label: 'Professionals',
+              groupId: 'professional_group',
+              children: const [],
             ),
           ],
         ),
       ),
 
       FormBlock(
-        id: 'block_things_to_retrieve',
-        title: 'Things to Retrieve',
+        id: 'block_documents',
+        title: 'Documents',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.receive,
+        column: 2,
         layout: LayoutColumn(
-          id: 'things_to_retrieve_root',
+          id: 'documents_root',
           children: [
             LayoutGroup(
-              id: 'retrieve_death_cert_group',
+              id: 'docs_death_cert_group',
               label: 'Death Certificate',
-              groupId: 'retrieve_death_cert_rrn',
+              groupId: 'docs_death_cert_rrn',
               children: const [],
             ),
             LayoutGroup(
-              id: 'retrieve_will_group',
-              label: 'Will / Certificate of Appointment',
-              groupId: 'retrieve_will_rrn',
+              id: 'docs_will_group',
+              label: 'Will',
+              groupId: 'docs_will_rrn',
               children: const [],
             ),
             LayoutGroup(
-              id: 'retrieve_assets_group',
-              label: 'List of Assets',
-              groupId: 'retrieve_assets_rrn',
+              id: 'docs_probate_group',
+              label: 'Probate',
+              groupId: 'docs_probate_rrn',
               children: const [],
             ),
             LayoutGroup(
-              id: 'retrieve_estate_return_group',
-              label: 'Estate Information Return',
-              groupId: 'retrieve_estate_return_rrn',
+              id: 'docs_assets_group',
+              label: 'Complete List of Assets',
+              groupId: 'docs_assets_rrn',
               children: const [],
+            ),
+          ],
+        ),
+      ),
+
+      FormBlock(
+        id: 'block_tax_history',
+        title: 'Tax History',
+        borderStyle: BlockBorderStyle.leftHeavyAllLight,
+        colorScheme: BlockColorScheme.documents,
+        column: 2,
+        layout: LayoutColumn(
+          id: 'tax_history_root',
+          children: [
+            LayoutNodeRef(
+              id: 'tax_gph_client_ref',
+              nodeId: 'tax_gph_client',
+              widthFraction: 1.0,
+            ),
+            LayoutGroup(
+              id: 'tax_gph_yes_group',
+              label: '',
+              visibilityCondition: const ChoiceEqualsCondition(
+                nodeId: 'tax_gph_client',
+                choiceIndex: 0,
+                expectedValue: true,
+              ),
+              children: [
+                LayoutNodeRef(
+                  id: 'tax_gph_notes_ref',
+                  nodeId: 'tax_gph_notes',
+                  widthFraction: 1.0,
+                ),
+              ],
+            ),
+            LayoutGroup(
+              id: 'tax_gph_no_group',
+              label: '',
+              visibilityCondition: const ChoiceEqualsCondition(
+                nodeId: 'tax_gph_client',
+                choiceIndex: 1,
+                expectedValue: true,
+              ),
+              children: [
+                LayoutGroup(
+                  id: 'tax_returns_rrn_group',
+                  label: 'Tax returns – previous 2 years',
+                  groupId: 'tax_returns_rrn',
+                  children: const [],
+                ),
+                LayoutNodeRef(
+                  id: 'tax_income_types_ref',
+                  nodeId: 'tax_income_types',
+                  widthFraction: 1.0,
+                ),
+                LayoutNodeRef(
+                  id: 'tax_income_notes_ref',
+                  nodeId: 'tax_income_notes',
+                  widthFraction: 1.0,
+                ),
+                LayoutNodeRef(
+                  id: 'tax_credits_ref',
+                  nodeId: 'tax_credits',
+                  widthFraction: 1.0,
+                ),
+                LayoutNodeRef(
+                  id: 'tax_credits_notes_ref',
+                  nodeId: 'tax_credits_notes',
+                  widthFraction: 1.0,
+                ),
+              ],
             ),
           ],
         ),
@@ -1114,6 +1240,7 @@ Future<FormDefinition> loadFormDefinition() async {
         title: 'Asset Details',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.asset,
+        column: 3,
         layout: LayoutColumn(
           id: 'asset_details_root',
           children: [
@@ -1136,15 +1263,10 @@ Future<FormDefinition> loadFormDefinition() async {
               children: const [],
             ),
             LayoutGroup(
-              id: 'shares_group',
-              label: 'Shares',
-              children: [
-                LayoutNodeRef(
-                  id: 'shares_notes_ref',
-                  nodeId: 'shares_notes',
-                  widthFraction: 1.0,
-                ),
-              ],
+              id: 'share_certificates_repeatable_section',
+              label: 'Share Certificates',
+              groupId: 'share_certificate_group',
+              children: const [],
             ),
             LayoutGroup(
               id: 'other_assets_repeatable_section',
@@ -1156,36 +1278,7 @@ Future<FormDefinition> loadFormDefinition() async {
         ),
       ),
 
-      FormBlock(
-        id: 'block_other_documents',
-        title: 'Other Documents',
-        borderStyle: BlockBorderStyle.leftHeavyAllLight,
-        colorScheme: BlockColorScheme.documents,
-        layout: LayoutColumn(
-          id: 'other_documents_root',
-          children: [
-            LayoutGroup(
-              id: 'docs_tax_returns_group',
-              label: 'Prior two years tax returns',
-              groupId: 'docs_tax_returns_rrn',
-              children: const [],
-            ),
-            LayoutGroup(
-              id: 'docs_donations_group',
-              label: 'Donations',
-              groupId: 'docs_donations_rrn',
-              children: const [],
-            ),
-            LayoutGroup(
-              id: 'docs_medical_receipts_group',
-              label: 'Medical receipts',
-              groupId: 'docs_medical_receipts_rrn',
-              children: const [],
-            ),
-          ],
-        ),
-      ),
-    ],
+      ],
     dataSpecs: {
       'deceased_name': DataSpec(
         formNodeID: 'deceased_name',
@@ -1238,150 +1331,145 @@ Future<FormDefinition> loadFormDefinition() async {
         profile: ValueProfile.plainText,
       ),
 
-      'executor_name': DataSpec(
-        formNodeID: 'executor_name',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'executor_address': DataSpec(
-        formNodeID: 'executor_address',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'executor_contact': DataSpec(
-        formNodeID: 'executor_contact',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'executor_wants_compensation': DataSpec(
-        formNodeID: 'executor_wants_compensation',
+      'meeting_type': DataSpec(
+        formNodeID: 'meeting_type',
         valueKind: ValueKind.stringList,
         profile: ValueProfile.plainText,
       ),
-      'executor_sin': DataSpec(
-        formNodeID: 'executor_sin',
+      'meeting_attendees': DataSpec(
+        formNodeID: 'meeting_attendees',
+        valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'meeting_other_attendees': DataSpec(
+        formNodeID: 'meeting_other_attendees',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_name': DataSpec(
+        formNodeID: 'trustee_name',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_relationship': DataSpec(
+        formNodeID: 'trustee_relationship',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_address': DataSpec(
+        formNodeID: 'trustee_address',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_contact': DataSpec(
+        formNodeID: 'trustee_contact',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_wants_compensation': DataSpec(
+        formNodeID: 'trustee_wants_compensation',
+        valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_sin': DataSpec(
+        formNodeID: 'trustee_sin',
         valueKind: ValueKind.number,
         profile: ValueProfile.sinCanada,
       ),
-      'executor_income_notes': DataSpec(
-        formNodeID: 'executor_income_notes',
+      'trustee_income_notes': DataSpec(
+        formNodeID: 'trustee_income_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-
-      'professionals_involved': DataSpec(
-        formNodeID: 'professionals_involved',
+      'trustee_is_other_person': DataSpec(
+        formNodeID: 'trustee_is_other_person',
         valueKind: ValueKind.stringList,
         profile: ValueProfile.plainText,
       ),
-      'lawyer_firm_phone': DataSpec(
-        formNodeID: 'lawyer_firm_phone',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.phoneNorthAmerica,
-      ),
-      'lawyer_firm_email': DataSpec(
-        formNodeID: 'lawyer_firm_email',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'lawyer_rep_phone': DataSpec(
-        formNodeID: 'lawyer_rep_phone',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.phoneNorthAmerica,
-      ),
-      'lawyer_rep_email': DataSpec(
-        formNodeID: 'lawyer_rep_email',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'lawyer_name': DataSpec(
-        formNodeID: 'lawyer_name',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'advisor_firm_phone': DataSpec(
-        formNodeID: 'advisor_firm_phone',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.phoneNorthAmerica,
-      ),
-      'advisor_firm_email': DataSpec(
-        formNodeID: 'advisor_firm_email',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'advisor_rep_phone': DataSpec(
-        formNodeID: 'advisor_rep_phone',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.phoneNorthAmerica,
-      ),
-      'advisor_rep_email': DataSpec(
-        formNodeID: 'advisor_rep_email',
-        valueKind: ValueKind.string,
-        profile: ValueProfile.plainText,
-      ),
-      'advisor_name': DataSpec(
-        formNodeID: 'advisor_name',
+      'trustee_relationship_to_trustee': DataSpec(
+        formNodeID: 'trustee_relationship_to_trustee',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
 
-      'retrieve_death_cert_requested': DataSpec(
-        formNodeID: 'retrieve_death_cert_requested',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'retrieve_death_cert_received': DataSpec(
-        formNodeID: 'retrieve_death_cert_received',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'retrieve_death_cert_notes': DataSpec(
-        formNodeID: 'retrieve_death_cert_notes',
+      'professional_profession': DataSpec(
+        formNodeID: 'professional_profession',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'retrieve_will_requested': DataSpec(
-        formNodeID: 'retrieve_will_requested',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'retrieve_will_received': DataSpec(
-        formNodeID: 'retrieve_will_received',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'retrieve_will_notes': DataSpec(
-        formNodeID: 'retrieve_will_notes',
+      'professional_name': DataSpec(
+        formNodeID: 'professional_name',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'retrieve_assets_requested': DataSpec(
-        formNodeID: 'retrieve_assets_requested',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'retrieve_assets_received': DataSpec(
-        formNodeID: 'retrieve_assets_received',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'retrieve_assets_notes': DataSpec(
-        formNodeID: 'retrieve_assets_notes',
+      'professional_email': DataSpec(
+        formNodeID: 'professional_email',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'retrieve_estate_return_requested': DataSpec(
-        formNodeID: 'retrieve_estate_return_requested',
+      'professional_phone': DataSpec(
+        formNodeID: 'professional_phone',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.phoneNorthAmerica,
+      ),
+
+      'docs_death_cert_requested': DataSpec(
+        formNodeID: 'docs_death_cert_requested',
         valueKind: ValueKind.boolean,
         profile: ValueProfile.plainText,
       ),
-      'retrieve_estate_return_received': DataSpec(
-        formNodeID: 'retrieve_estate_return_received',
+      'docs_death_cert_received': DataSpec(
+        formNodeID: 'docs_death_cert_received',
         valueKind: ValueKind.boolean,
         profile: ValueProfile.plainText,
       ),
-      'retrieve_estate_return_notes': DataSpec(
-        formNodeID: 'retrieve_estate_return_notes',
+      'docs_death_cert_notes': DataSpec(
+        formNodeID: 'docs_death_cert_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_will_requested': DataSpec(
+        formNodeID: 'docs_will_requested',
+        valueKind: ValueKind.boolean,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_will_received': DataSpec(
+        formNodeID: 'docs_will_received',
+        valueKind: ValueKind.boolean,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_will_notes': DataSpec(
+        formNodeID: 'docs_will_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_probate_requested': DataSpec(
+        formNodeID: 'docs_probate_requested',
+        valueKind: ValueKind.boolean,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_probate_received': DataSpec(
+        formNodeID: 'docs_probate_received',
+        valueKind: ValueKind.boolean,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_probate_notes': DataSpec(
+        formNodeID: 'docs_probate_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_assets_requested': DataSpec(
+        formNodeID: 'docs_assets_requested',
+        valueKind: ValueKind.boolean,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_assets_received': DataSpec(
+        formNodeID: 'docs_assets_received',
+        valueKind: ValueKind.boolean,
+        profile: ValueProfile.plainText,
+      ),
+      'docs_assets_notes': DataSpec(
+        formNodeID: 'docs_assets_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
@@ -1423,15 +1511,15 @@ Future<FormDefinition> loadFormDefinition() async {
         profile: ValueProfile.plainText,
       ),
 
+      'nonreg_value_at_death': DataSpec(
+        formNodeID: 'nonreg_value_at_death',
+        valueKind: ValueKind.number,
+        profile: ValueProfile.moneyCents,
+      ),
       'nonreg_gain_loss': DataSpec(
         formNodeID: 'nonreg_gain_loss',
         valueKind: ValueKind.number,
         profile: ValueProfile.moneyCents,
-      ),
-      'nonreg_has_dividends': DataSpec(
-        formNodeID: 'nonreg_has_dividends',
-        valueKind: ValueKind.stringList,
-        profile: ValueProfile.plainText,
       ),
       'nonreg_yod_requested': DataSpec(
         formNodeID: 'nonreg_yod_requested',
@@ -1475,8 +1563,23 @@ Future<FormDefinition> loadFormDefinition() async {
         profile: ValueProfile.plainText,
       ),
 
-      'shares_notes': DataSpec(
-        formNodeID: 'shares_notes',
+      'share_company_name': DataSpec(
+        formNodeID: 'share_company_name',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'share_number_of_shares': DataSpec(
+        formNodeID: 'share_number_of_shares',
+        valueKind: ValueKind.number,
+        profile: ValueProfile.plainText,
+      ),
+      'share_notes': DataSpec(
+        formNodeID: 'share_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'asset_notes': DataSpec(
+        formNodeID: 'asset_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
@@ -1516,13 +1619,23 @@ Future<FormDefinition> loadFormDefinition() async {
         valueKind: ValueKind.number,
         profile: ValueProfile.moneyCents,
       ),
-      'realestate_other_ownership_history_notes': DataSpec(
-        formNodeID: 'realestate_other_ownership_history_notes',
+      'realestate_principal_all_years': DataSpec(
+        formNodeID: 'realestate_principal_all_years',
+        valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'realestate_principal_all_years_notes': DataSpec(
+        formNodeID: 'realestate_principal_all_years_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'realestate_other_significant_improvements_notes': DataSpec(
-        formNodeID: 'realestate_other_significant_improvements_notes',
+      'realestate_capital_improvements': DataSpec(
+        formNodeID: 'realestate_capital_improvements',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'realestate_ownership_tax_history': DataSpec(
+        formNodeID: 'realestate_ownership_tax_history',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
@@ -1549,48 +1662,48 @@ Future<FormDefinition> loadFormDefinition() async {
         profile: ValueProfile.moneyCents,
       ),
 
-      'docs_tax_returns_requested': DataSpec(
-        formNodeID: 'docs_tax_returns_requested',
-        valueKind: ValueKind.boolean,
+      'tax_gph_client': DataSpec(
+        formNodeID: 'tax_gph_client',
+        valueKind: ValueKind.stringList,
         profile: ValueProfile.plainText,
       ),
-      'docs_tax_returns_received': DataSpec(
-        formNodeID: 'docs_tax_returns_received',
-        valueKind: ValueKind.boolean,
-        profile: ValueProfile.plainText,
-      ),
-      'docs_tax_returns_notes': DataSpec(
-        formNodeID: 'docs_tax_returns_notes',
+      'tax_gph_notes': DataSpec(
+        formNodeID: 'tax_gph_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'docs_donations_requested': DataSpec(
-        formNodeID: 'docs_donations_requested',
+      'tax_returns_requested': DataSpec(
+        formNodeID: 'tax_returns_requested',
         valueKind: ValueKind.boolean,
         profile: ValueProfile.plainText,
       ),
-      'docs_donations_received': DataSpec(
-        formNodeID: 'docs_donations_received',
+      'tax_returns_received': DataSpec(
+        formNodeID: 'tax_returns_received',
         valueKind: ValueKind.boolean,
         profile: ValueProfile.plainText,
       ),
-      'docs_donations_notes': DataSpec(
-        formNodeID: 'docs_donations_notes',
+      'tax_returns_notes': DataSpec(
+        formNodeID: 'tax_returns_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'docs_medical_receipts_requested': DataSpec(
-        formNodeID: 'docs_medical_receipts_requested',
-        valueKind: ValueKind.boolean,
+      'tax_income_types': DataSpec(
+        formNodeID: 'tax_income_types',
+        valueKind: ValueKind.stringList,
         profile: ValueProfile.plainText,
       ),
-      'docs_medical_receipts_received': DataSpec(
-        formNodeID: 'docs_medical_receipts_received',
-        valueKind: ValueKind.boolean,
+      'tax_income_notes': DataSpec(
+        formNodeID: 'tax_income_notes',
+        valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
-      'docs_medical_receipts_notes': DataSpec(
-        formNodeID: 'docs_medical_receipts_notes',
+      'tax_credits': DataSpec(
+        formNodeID: 'tax_credits',
+        valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'tax_credits_notes': DataSpec(
+        formNodeID: 'tax_credits_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),

@@ -28,6 +28,7 @@ class FormBlock {
   final BlockBorderStyle borderStyle;
   final BlockColorScheme colorScheme;
   final bool stickToTop;
+  final int column; // 1, 2, or 3 for three-column layout
 
   FormBlock({
     required this.id,
@@ -37,6 +38,7 @@ class FormBlock {
     this.borderStyle = BlockBorderStyle.none,
     this.colorScheme = BlockColorScheme.none,
     this.stickToTop = false,
+    this.column = 1,
   });
 
   /// Gets the primary color for this block's color scheme

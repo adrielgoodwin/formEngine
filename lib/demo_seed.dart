@@ -135,47 +135,56 @@ Future<void> _seedAllDemoCases(FormDefinition def, CaseRepository repo) async {
       instance.setValue('partner_sin', '987654321');
       instance.setValue('partner_address', '742 Evergreen Terrace, Springfield, ON L1A 2B3');
 
-      // Executors
-      final executor1 = _ensureGroupInstance(instance, 'executor_other_info');
-      instance.setGroupValue('executor_other_info', executor1.instanceId, 'executor_name', 'James Allgood');
-      instance.setGroupValue('executor_other_info', executor1.instanceId, 'executor_address', '123 Main St, Toronto, ON M5V 1A1');
-      instance.setGroupValue('executor_other_info', executor1.instanceId, 'executor_contact', 'james.allgood@email.com, (416) 555-0123');
-      instance.setGroupValue('executor_other_info', executor1.instanceId, 'executor_wants_compensation', [true, false]);
-      instance.setGroupValue('executor_other_info', executor1.instanceId, 'executor_sin', '111222333');
-      instance.setGroupValue('executor_other_info', executor1.instanceId, 'executor_income_notes', 'Professional accountant with 25+ years experience');
+      // Meeting info
+      instance.setValue('meeting_type', [true, false, false]); // In person
+      instance.setValue('meeting_attendees', [true, true, false]); // MM, DG
+      instance.setValue('meeting_other_attendees', 'John Smith (family lawyer)');
 
-      final executor2 = _addNewGroupInstance(instance, 'executor_other_info');
-      instance.setGroupValue('executor_other_info', executor2.instanceId, 'executor_name', 'Sarah Allgood');
-      instance.setGroupValue('executor_other_info', executor2.instanceId, 'executor_address', '456 Oak Ave, Toronto, ON M4B 2C4');
-      instance.setGroupValue('executor_other_info', executor2.instanceId, 'executor_contact', 'sarah.allgood@email.com, (416) 555-0456');
-      instance.setGroupValue('executor_other_info', executor2.instanceId, 'executor_wants_compensation', [false, true]);
+      // Trustees
+      final trustee1 = _ensureGroupInstance(instance, 'trustee_group');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_name', 'James Allgood');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_relationship', 'Son');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_address', '123 Main St, Toronto, ON M5V 1A1');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_contact', 'james.allgood@email.com, (416) 555-0123');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_wants_compensation', [true, false]);
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_sin', '111222333');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_income_notes', 'Professional accountant with 25+ years experience');
+      instance.setGroupValue('trustee_group', trustee1.instanceId, 'trustee_is_other_person', [false, true]);
+
+      final trustee2 = _addNewGroupInstance(instance, 'trustee_group');
+      instance.setGroupValue('trustee_group', trustee2.instanceId, 'trustee_name', 'Sarah Allgood');
+      instance.setGroupValue('trustee_group', trustee2.instanceId, 'trustee_relationship', 'Daughter');
+      instance.setGroupValue('trustee_group', trustee2.instanceId, 'trustee_address', '456 Oak Ave, Toronto, ON M4B 2C4');
+      instance.setGroupValue('trustee_group', trustee2.instanceId, 'trustee_contact', 'sarah.allgood@email.com, (416) 555-0456');
+      instance.setGroupValue('trustee_group', trustee2.instanceId, 'trustee_wants_compensation', [false, true]);
+      instance.setGroupValue('trustee_group', trustee2.instanceId, 'trustee_is_other_person', [false, true]);
 
       // Professionals
-      instance.setValue('professionals_involved', [true, true]);
-      instance.setValue('lawyer_name', 'Robert Thompson');
-      instance.setValue('lawyer_firm_phone', '(416) 555-1000');
-      instance.setValue('lawyer_firm_email', 'info@thompsonlaw.com');
-      instance.setValue('lawyer_rep_phone', '(416) 555-1001');
-      instance.setValue('lawyer_rep_email', 'r.thompson@thompsonlaw.com');
-      instance.setValue('advisor_name', 'Jennifer Walsh');
-      instance.setValue('advisor_firm_phone', '(416) 555-2000');
-      instance.setValue('advisor_firm_email', 'info@walshinvestments.com');
-      instance.setValue('advisor_rep_phone', '(416) 555-2001');
-      instance.setValue('advisor_rep_email', 'j.walsh@walshinvestments.com');
+      final prof1 = _ensureGroupInstance(instance, 'professional_group');
+      instance.setGroupValue('professional_group', prof1.instanceId, 'professional_profession', 'Lawyer');
+      instance.setGroupValue('professional_group', prof1.instanceId, 'professional_name', 'Robert Thompson');
+      instance.setGroupValue('professional_group', prof1.instanceId, 'professional_email', 'r.thompson@thompsonlaw.com');
+      instance.setGroupValue('professional_group', prof1.instanceId, 'professional_phone', '(416) 555-1001');
 
-      // RRN fields
-      instance.setValue('retrieve_death_cert_requested', [true]);
-      instance.setValue('retrieve_death_cert_received', [true]);
-      instance.setValue('retrieve_death_cert_notes', 'Death certificate obtained from ServiceOntario, original filed with estate documents');
-      instance.setValue('retrieve_will_requested', [true]);
-      instance.setValue('retrieve_will_received', [true]);
-      instance.setValue('retrieve_will_notes', 'Last will and testament dated 2020-03-15, stored in safety deposit box at TD Bank');
-      instance.setValue('retrieve_assets_requested', [true]);
-      instance.setValue('retrieve_assets_received', [true]);
-      instance.setValue('retrieve_assets_notes', 'Complete asset list compiled from bank statements, investment accounts, and property records');
-      instance.setValue('retrieve_estate_return_requested', [true]);
-      instance.setValue('retrieve_estate_return_received', [true]);
-      instance.setValue('retrieve_estate_return_notes', 'Estate Information Return filed with CRA, reference number ER2023-456789');
+      final prof2 = _addNewGroupInstance(instance, 'professional_group');
+      instance.setGroupValue('professional_group', prof2.instanceId, 'professional_profession', 'Investment Advisor');
+      instance.setGroupValue('professional_group', prof2.instanceId, 'professional_name', 'Jennifer Walsh');
+      instance.setGroupValue('professional_group', prof2.instanceId, 'professional_email', 'j.walsh@walshinvestments.com');
+      instance.setGroupValue('professional_group', prof2.instanceId, 'professional_phone', '(416) 555-2001');
+
+      // Documents RRN fields
+      instance.setValue('docs_death_cert_requested', [true]);
+      instance.setValue('docs_death_cert_received', [true]);
+      instance.setValue('docs_death_cert_notes', 'Death certificate obtained from ServiceOntario, original filed with estate documents');
+      instance.setValue('docs_will_requested', [true]);
+      instance.setValue('docs_will_received', [true]);
+      instance.setValue('docs_will_notes', 'Last will and testament dated 2020-03-15, stored in safety deposit box at TD Bank');
+      instance.setValue('docs_probate_requested', [true]);
+      instance.setValue('docs_probate_received', [true]);
+      instance.setValue('docs_probate_notes', 'Probate application filed, certificate pending');
+      instance.setValue('docs_assets_requested', [true]);
+      instance.setValue('docs_assets_received', [true]);
+      instance.setValue('docs_assets_notes', 'Complete asset list compiled from bank statements, investment accounts, and property records');
 
       // RRSP accounts
       final rrsp1 = _ensureGroupInstance(instance, 'rrsp_account_group');
@@ -194,8 +203,8 @@ Future<void> _seedAllDemoCases(FormDefinition def, CaseRepository repo) async {
       final nonReg1 = _ensureGroupInstance(instance, 'nonreg_account_group');
       instance.setGroupValue('nonreg_account_group', nonReg1.instanceId, 'nonreg_institution', 'BMO');
       instance.setGroupValue('nonreg_account_group', nonReg1.instanceId, 'nonreg_account_number', 'TFSA-111222333');
+      instance.setGroupValue('nonreg_account_group', nonReg1.instanceId, 'nonreg_value_at_death', 15000000);
       instance.setGroupValue('nonreg_account_group', nonReg1.instanceId, 'nonreg_gain_loss', 2500000);
-      instance.setGroupValue('nonreg_account_group', nonReg1.instanceId, 'nonreg_has_dividends', [true, false]);
 
       // Other assets
       final asset1 = _ensureGroupInstance(instance, 'asset_group');
@@ -206,8 +215,16 @@ Future<void> _seedAllDemoCases(FormDefinition def, CaseRepository repo) async {
       instance.setGroupValue('asset_group', asset2.instanceId, 'asset_description', 'Art collection and jewelry');
       instance.setGroupValue('asset_group', asset2.instanceId, 'asset_value', 7500000);
 
-      // Shares notes
-      instance.setValue('shares_notes', 'Investment portfolio includes shares in major Canadian banks and energy companies, valued at approximately \$150,000 at time of death');
+      // Share certificates
+      final share1 = _ensureGroupInstance(instance, 'share_certificate_group');
+      instance.setGroupValue('share_certificate_group', share1.instanceId, 'share_company_name', 'Royal Bank of Canada');
+      instance.setGroupValue('share_certificate_group', share1.instanceId, 'share_number_of_shares', '500');
+      instance.setGroupValue('share_certificate_group', share1.instanceId, 'share_notes', 'DRIP enrolled since 2010, reinvested dividends');
+
+      final share2 = _addNewGroupInstance(instance, 'share_certificate_group');
+      instance.setGroupValue('share_certificate_group', share2.instanceId, 'share_company_name', 'Enbridge Inc.');
+      instance.setGroupValue('share_certificate_group', share2.instanceId, 'share_number_of_shares', '1000');
+      instance.setGroupValue('share_certificate_group', share2.instanceId, 'share_notes', 'Cash dividends, purchased in 2005');
 
       // Real estate
       final realEst1 = _ensureGroupInstance(instance, 'realestate_group');
@@ -223,20 +240,19 @@ Future<void> _seedAllDemoCases(FormDefinition def, CaseRepository repo) async {
       instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_other_year_of_purchase', '2005');
       instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_other_purchase_price', 45000000);
       instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_other_value_at_death', 67500000);
-      instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_other_ownership_history_notes', 'Purchased in 2005, used as vacation property');
-      instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_other_significant_improvements_notes', 'Added deck and hot tub in 2010, renovated basement in 2018');
+      instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_capital_improvements', 'Added deck and hot tub in 2010, renovated basement in 2018');
+      instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_ownership_tax_history', 'Purchased in 2005, used as vacation property. 1994 election made.');
       instance.setGroupValue('realestate_group', realEst2.instanceId, 'realestate_other_whats_happening_notes', 'Currently listed for sale, expected to close in March 2024');
 
-      // Additional RRN documents
-      instance.setValue('docs_tax_returns_requested', [true]);
-      instance.setValue('docs_tax_returns_received', [true]);
-      instance.setValue('docs_tax_returns_notes', 'Tax returns for 2020, 2021, and 2022 obtained from accountant');
-      instance.setValue('docs_donations_requested', [true]);
-      instance.setValue('docs_donations_received', [true]);
-      instance.setValue('docs_donations_notes', 'Charitable donation receipts totaling \$25,000 in 2023');
-      instance.setValue('docs_medical_receipts_requested', [true]);
-      instance.setValue('docs_medical_receipts_received', [true]);
-      instance.setValue('docs_medical_receipts_notes', 'Medical expense receipts for tax purposes, \$12,500 claimed');
+      // Tax History (Not GPH client, so show full tax history)
+      instance.setValue('tax_gph_client', [false, true]); // No
+      instance.setValue('tax_returns_requested', [true]);
+      instance.setValue('tax_returns_received', [true]);
+      instance.setValue('tax_returns_notes', 'Tax returns for 2021 and 2022 obtained from accountant');
+      instance.setValue('tax_income_types', [true, true, true, true, false, false, false, false, false]); // CPP, T4, OAS, T5
+      instance.setValue('tax_income_notes', 'Pension income from government and employer sources');
+      instance.setValue('tax_credits', [true, true, false]); // Donations, Medical
+      instance.setValue('tax_credits_notes', 'Charitable donations \$25,000, Medical expenses \$12,500');
     },
   );
 }
