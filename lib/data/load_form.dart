@@ -94,6 +94,11 @@ Future<FormDefinition> loadFormDefinition() async {
         ],
         choiceCardinality: ChoiceCardinality.single,
       ),
+      'deceased_notes': TextInputNode(
+        id: 'deceased_notes',
+        label: 'Notes',
+        multiLine: true,
+      ),
       'partner_name': TextInputNode(
         id: 'partner_name',
         label: 'Partner Full Name',
@@ -926,6 +931,11 @@ Future<FormDefinition> loadFormDefinition() async {
                 ),
               ],
             ),
+            LayoutNodeRef(
+              id: 'deceased_notes_ref',
+              nodeId: 'deceased_notes',
+              widthFraction: 1.0,
+            ),
           ],
         ),
       ),
@@ -1199,6 +1209,11 @@ Future<FormDefinition> loadFormDefinition() async {
       'deceased_marital_status': DataSpec(
         formNodeID: 'deceased_marital_status',
         valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'deceased_notes': DataSpec(
+        formNodeID: 'deceased_notes',
+        valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
       'partner_name': DataSpec(
