@@ -431,21 +431,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    TextButton(
-                                onPressed: () => _openCase(context, caseRecord),
-                                style: TextButton.styleFrom(
-                                  overlayColor: MaterialStateColor.resolveWith((states) {
-                                    if (states.contains(MaterialState.pressed)) {
-                                      return Colors.transparent;
-                                    }
-                                    if (states.contains(MaterialState.hovered)) {
-                                      return Colors.black.withOpacity(0.04);
-                                    }
-                                    return Colors.transparent;
-                                  }),
-                                ),
-                                child: const Text('Open'),
-                              ),
+                                    // Only show Open button for non-archived cases
+                                    if (!caseRecord.isArchived)
+                                      TextButton(
+                                        onPressed: () => _openCase(context, caseRecord),
+                                        style: TextButton.styleFrom(
+                                          overlayColor: MaterialStateColor.resolveWith((states) {
+                                            if (states.contains(MaterialState.pressed)) {
+                                              return Colors.transparent;
+                                            }
+                                            if (states.contains(MaterialState.hovered)) {
+                                              return Colors.black.withOpacity(0.04);
+                                            }
+                                            return Colors.transparent;
+                                          }),
+                                        ),
+                                        child: const Text('Open'),
+                                      ),
                                     TextButton(
                                 onPressed: () => _runReport(context, caseRecord),
                                 style: TextButton.styleFrom(

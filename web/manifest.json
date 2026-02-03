@@ -1,11 +1,11 @@
 {
-    "name": "form_engine",
-    "short_name": "form_engine",
+    "name": "Estate Intake",
+    "short_name": "Estate Intake",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Estate Intake - Deceased estate case management system",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

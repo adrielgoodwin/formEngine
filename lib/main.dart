@@ -79,7 +79,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Form Engine',
+      title: 'Estate Intake',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         pageTransitionsTheme: const PageTransitionsTheme(
