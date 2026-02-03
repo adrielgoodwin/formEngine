@@ -27,6 +27,7 @@ class FormBlock {
   final LayoutItem layout;
   final BlockBorderStyle borderStyle;
   final BlockColorScheme colorScheme;
+  final bool stickToTop;
 
   FormBlock({
     required this.id,
@@ -35,6 +36,7 @@ class FormBlock {
     this.description = "",
     this.borderStyle = BlockBorderStyle.none,
     this.colorScheme = BlockColorScheme.none,
+    this.stickToTop = false,
   });
 
   /// Gets the primary color for this block's color scheme

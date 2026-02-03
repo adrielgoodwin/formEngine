@@ -74,10 +74,7 @@ class _FormEditorScreenState extends State<FormEditorScreen> {
       ),
       body: formState.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: renderForm(formState.assembledForm, context),
-            ),
+          : renderForm(formState.assembledForm, context),
     );
   }
 }

@@ -857,6 +857,7 @@ Future<FormDefinition> loadFormDefinition() async {
         title: 'Deceased Information',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.deceased,
+        stickToTop: true,
         layout: LayoutColumn(
           id: 'deceased_information_root',
           children: [

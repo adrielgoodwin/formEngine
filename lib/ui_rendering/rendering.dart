@@ -64,65 +64,94 @@ Widget renderForm(AssembledForm form, BuildContext context) {
   final blockIds = form.blocks.map((block) => block.id).toList();
   _blockCollapseState.initializeBlocks(blockIds);
   
+  // Find first sticky block (only one supported)
+  final stickyBlockIndex = form.blocks.indexWhere((b) => b.formBlock.stickToTop);
+  final stickyBlock = stickyBlockIndex >= 0 ? form.blocks[stickyBlockIndex] : null;
+  
+  // All non-sticky blocks (maintaining original order, excluding the sticky one)
+  final nonStickyBlocks = form.blocks.where((b) => !b.formBlock.stickToTop).toList();
+  
   return ChangeNotifierProvider.value(
     value: _blockCollapseState,
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(form.title, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 16),
-          // Collapse/Expand all button
-          Consumer<BlockCollapseState>(
-            builder: (context, collapseState, child) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (collapseState.allExpanded()) {
-                          collapseState.collapseAll();
-                        } else {
-                          collapseState.expandAll();
-                        }
-                      },
-                      icon: Icon(
-                        collapseState.allExpanded() ? Icons.expand_more : Icons.expand_less,
-                      ),
-                      label: Text(
-                        collapseState.allExpanded() ? 'Collapse' : 'Expand',
-                        style: const TextStyle(color: Colors.black),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        minimumSize: const Size(120, 36),
-                        fixedSize: const Size(120, 36),
-                        elevation: 2,
-                        shadowColor: Colors.black26,
-                        surfaceTintColor: Colors.transparent,
-                        overlayColor: MaterialStateColor.resolveWith((states) {
-                          if (states.contains(MaterialState.pressed)) {
-                            return Colors.transparent;
-                          }
-                          if (states.contains(MaterialState.hovered)) {
-                            return Colors.black.withOpacity(0.04);
-                          }
-                          return Colors.transparent;
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+    child: Column(
+      children: [
+        // Fixed sticky block at top (if exists)
+        if (stickyBlock != null)
+          Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              child: renderBlock(stickyBlock, context),
+            ),
           ),
-          ...form.blocks.map((block) => renderBlock(block, context)),
-        ],
-      ),
+        
+        // Scrollable content below
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title and collapse button (only if no sticky block, otherwise it's redundant)
+                if (stickyBlock == null) ...[
+                  Text(form.title, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(height: 16),
+                ],
+                // Collapse/Expand all button
+                Consumer<BlockCollapseState>(
+                  builder: (context, collapseState, child) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          const Spacer(),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              if (collapseState.allExpanded()) {
+                                collapseState.collapseAll();
+                              } else {
+                                collapseState.expandAll();
+                              }
+                            },
+                            icon: Icon(
+                              collapseState.allExpanded() ? Icons.expand_more : Icons.expand_less,
+                            ),
+                            label: Text(
+                              collapseState.allExpanded() ? 'Collapse' : 'Expand',
+                              style: const TextStyle(color: Colors.black),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              minimumSize: const Size(120, 36),
+                              fixedSize: const Size(120, 36),
+                              elevation: 2,
+                              shadowColor: Colors.black26,
+                              surfaceTintColor: Colors.transparent,
+                              overlayColor: MaterialStateColor.resolveWith((states) {
+                                if (states.contains(MaterialState.pressed)) {
+                                  return Colors.transparent;
+                                }
+                                if (states.contains(MaterialState.hovered)) {
+                                  return Colors.black.withOpacity(0.04);
+                                }
+                                return Colors.transparent;
+                              }),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                // All non-sticky blocks
+                ...nonStickyBlocks.map((block) => renderBlock(block, context)),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
