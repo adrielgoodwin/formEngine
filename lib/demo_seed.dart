@@ -137,7 +137,7 @@ Future<void> _seedAllDemoCases(FormDefinition def, CaseRepository repo) async {
 
       // Meeting info
       instance.setValue('meeting_type', [true, false, false]); // In person
-      instance.setValue('meeting_attendees', [true, true, false]); // MM, DG
+      instance.setValue('meeting_attendees', [true, true, false, false]); // MM, DG, EL, Other
       instance.setValue('meeting_other_attendees', 'John Smith (family lawyer)');
 
       // Trustees
@@ -251,7 +251,7 @@ Future<void> _seedAllDemoCases(FormDefinition def, CaseRepository repo) async {
       instance.setValue('tax_returns_notes', 'Tax returns for 2021 and 2022 obtained from accountant');
       instance.setValue('tax_income_types', [true, true, true, true, false, false, false, false, false]); // CPP, T4, OAS, T5
       instance.setValue('tax_income_notes', 'Pension income from government and employer sources');
-      instance.setValue('tax_credits', [true, true, false]); // Donations, Medical
+      instance.setValue('tax_credits', [true, true, false]); // Donations, Medical, DTC
       instance.setValue('tax_credits_notes', 'Charitable donations \$25,000, Medical expenses \$12,500');
     },
   );

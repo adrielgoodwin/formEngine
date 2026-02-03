@@ -163,7 +163,7 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'trustee_income_notes': TextInputNode(
         id: 'trustee_income_notes',
-        label: 'Income Notes',
+        label: 'Income Notes (DOB, CPP, RSP)',
         multiLine: true,
       ),
       'trustee_is_other_person': ChoiceInputNode(
@@ -492,7 +492,7 @@ Future<FormDefinition> loadFormDefinition() async {
       'tax_credits': ChoiceInputNode(
         id: 'tax_credits',
         label: 'Tax Credits',
-        choiceLabels: ['Donations', 'Medical', 'Other'],
+        choiceLabels: ['Donations', 'Medical', 'DTC'],
         choiceCardinality: ChoiceCardinality.multiple,
       ),
       'tax_credits_notes': TextInputNode(
@@ -535,31 +535,21 @@ Future<FormDefinition> loadFormDefinition() async {
             widthFraction: 1.0,
           ),
           LayoutRow(
-            id: 'trustee_row_2',
+            id: 'trustee_compensation_row',
             children: [
               LayoutNodeRef(
                 id: 'trustee_compensation_ref',
                 nodeId: 'trustee_wants_compensation',
                 widthFraction: 0.3,
               ),
-              LayoutNodeRef(
-                id: 'trustee_other_person_ref',
-                nodeId: 'trustee_is_other_person',
-                widthFraction: 0.3,
-              ),
-            ],
-          ),
-          LayoutGroup(
-            id: 'trustee_compensation_details_group',
-            label: 'Compensation Details',
-            visibilityCondition: const ChoiceEqualsCondition(
-              nodeId: 'trustee_wants_compensation',
-              choiceIndex: 0,
-              expectedValue: true,
-            ),
-            children: [
-              LayoutRow(
-                id: 'trustee_compensation_details_row',
+              LayoutGroup(
+                id: 'trustee_compensation_details_inline',
+                label: '',
+                visibilityCondition: const ChoiceEqualsCondition(
+                  nodeId: 'trustee_wants_compensation',
+                  choiceIndex: 0,
+                  expectedValue: true,
+                ),
                 children: [
                   LayoutNodeRef(
                     id: 'trustee_sin_ref',
@@ -569,25 +559,35 @@ Future<FormDefinition> loadFormDefinition() async {
                   LayoutNodeRef(
                     id: 'trustee_income_notes_ref',
                     nodeId: 'trustee_income_notes',
-                    widthFraction: 0.7,
+                    widthFraction: 0.4,
                   ),
                 ],
               ),
             ],
           ),
-          LayoutGroup(
-            id: 'trustee_other_person_details_group',
-            label: '',
-            visibilityCondition: const ChoiceEqualsCondition(
-              nodeId: 'trustee_is_other_person',
-              choiceIndex: 0,
-              expectedValue: true,
-            ),
+          LayoutRow(
+            id: 'trustee_other_person_row',
             children: [
               LayoutNodeRef(
-                id: 'trustee_relationship_to_trustee_ref',
-                nodeId: 'trustee_relationship_to_trustee',
-                widthFraction: 1.0,
+                id: 'trustee_other_person_ref',
+                nodeId: 'trustee_is_other_person',
+                widthFraction: 0.3,
+              ),
+              LayoutGroup(
+                id: 'trustee_other_person_details_inline',
+                label: '',
+                visibilityCondition: const ChoiceEqualsCondition(
+                  nodeId: 'trustee_is_other_person',
+                  choiceIndex: 0,
+                  expectedValue: true,
+                ),
+                children: [
+                  LayoutNodeRef(
+                    id: 'trustee_relationship_to_trustee_ref',
+                    nodeId: 'trustee_relationship_to_trustee',
+                    widthFraction: 0.7,
+                  ),
+                ],
               ),
             ],
           ),

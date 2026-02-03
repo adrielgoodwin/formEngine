@@ -364,6 +364,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       builder: (context) {
                                         final dod = caseRecord.formInstance.getValue<String>('deceased_dod');
                                         if (dod != null && dod.isNotEmpty) {
+                                          // Parse the dd/mm/yyyy format and reformat to dd/Month/yyyy
+                                          try {
+                                            final parts = dod.split('/');
+                                            if (parts.length == 3) {
+                                              final day = parts[0].padLeft(2, '0');
+                                              final month = int.parse(parts[1]);
+                                              final year = parts[2];
+                                              final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                              final monthName = monthNames[month - 1];
+                                              final formattedDate = '$day/$monthName/$year';
+                                              return Text(
+                                                'Date of Death: $formattedDate',
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: Colors.red[700],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              );
+                                            }
+                                          } catch (e) {
+                                            // If parsing fails, show original value
+                                          }
                                           return Text(
                                             'Date of Death: $dod',
                                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -574,9 +597,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
+    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final monthName = monthNames[date.month - 1];
     final year = date.year;
-    return '$day/$month/$year';
+    return '$day/$monthName/$year';
   }
 
   List<CaseRecord> _sortCases(List<CaseRecord> cases) {

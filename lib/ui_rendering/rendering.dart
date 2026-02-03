@@ -157,17 +157,25 @@ class CollapsibleBlock extends StatelessWidget {
             side: otherBorders ?? BorderSide.none,
           ),
           child: Container(
-            decoration: leftBorder != null
-                ? BoxDecoration(
-                    border: Border(
+            decoration: BoxDecoration(
+              border: leftBorder != null
+                  ? Border(
                       left: leftBorder,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                      bottomLeft: Radius.circular(4),
-                    ),
-                  )
-                : null,
+                    )
+                  : null,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                bottomLeft: Radius.circular(4),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: formBlock.getPrimaryColor().withValues(alpha: 0.2),
+                  offset: const Offset(-2, -2),
+                  blurRadius: 4,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
             child: Padding(
               padding: const EdgeInsets.all(2),
               child: Column(
@@ -176,8 +184,8 @@ class CollapsibleBlock extends StatelessWidget {
                 children: [
                   // Always show content (no headers)
                   isAssets
-                      ? _renderAssetBlockLayout(block.layout, context)
-                      : renderLayout(block.layout, context),
+                      ? _renderAssetBlockLayout(block.layout, context, blockColor: formBlock.getPrimaryColor())
+                      : renderLayout(block.layout, context, blockColor: formBlock.getPrimaryColor()),
                 ],
               ),
             ),
@@ -192,14 +200,14 @@ Widget renderBlock(AssembledBlock block, BuildContext context) {
   return CollapsibleBlock(block: block, context: context);
 }
 
-Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context) {
+Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context, {Color? blockColor}) {
   if (layout is AssembledColumn) {
     final children = layout.children;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < children.length; i++) ...[
-          _renderLayoutScoped(children[i], context, groupId: null, instanceId: null),
+          _renderLayoutScoped(children[i], context, groupId: null, instanceId: null, blockColor: blockColor),
           if (i != children.length - 1) ...[
             const SizedBox(height: 2),
             const Divider(thickness: 1, color: Colors.black12),
@@ -210,15 +218,15 @@ Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context) {
     );
   }
 
-  return renderLayout(layout, context);
+  return renderLayout(layout, context, blockColor: blockColor);
 }
 
 /// =======================
 /// LAYOUT TREE RENDERER
 /// =======================
 
-Widget renderLayout(AssembledLayout layout, BuildContext context) {
-  return _renderLayoutScoped(layout, context, groupId: null, instanceId: null);
+Widget renderLayout(AssembledLayout layout, BuildContext context, {Color? blockColor}) {
+  return _renderLayoutScoped(layout, context, groupId: null, instanceId: null, blockColor: blockColor);
 }
 
 Widget _renderLayoutScoped(
@@ -226,6 +234,7 @@ Widget _renderLayoutScoped(
   BuildContext context, {
   String? groupId,
   String? instanceId,
+  Color? blockColor,
 }) {
   final formState = context.watch<FormStateProvider>();
   
@@ -267,7 +276,7 @@ Widget _renderLayoutScoped(
             // into awkward spacing; still respects widthFraction.
             return Wrap(
               spacing: 6,
-              runSpacing: 6,
+              runSpacing: 2,
               children: layout.children.map((child) {
                 final fraction = child is AssembledNode ? child.widthFraction : 1.0;
                 final width = (maxWidth * fraction).clamp(200.0, maxWidth);
@@ -293,7 +302,7 @@ Widget _renderLayoutScoped(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: _renderLayoutScoped(child, context,
-                      groupId: groupId, instanceId: instanceId),
+                      groupId: groupId, instanceId: instanceId, blockColor: blockColor),
                 ),
               );
             }).toList(),
@@ -304,13 +313,11 @@ Widget _renderLayoutScoped(
     case AssembledColumn():
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: layout.children
             .map(
-              (child) => Padding(
-                padding: const EdgeInsets.only(bottom: 1),
-                child: _renderLayoutScoped(child, context,
-                    groupId: groupId, instanceId: instanceId),
-              ),
+              (child) => _renderLayoutScoped(child, context,
+                    groupId: groupId, instanceId: instanceId, blockColor: blockColor),
             )
             .toList(),
       );
@@ -325,11 +332,14 @@ Widget _renderLayoutScoped(
 
         final addLabel = switch (layout.groupId) {
           'executor_other_info' => 'Add Executor',
+          'professional_group' => 'Add Professional',
+          'trustee_group' => 'Add Trustee',
+          'share_certificate_group' => 'Add Share Certificate',
           'realestate_group' => 'Add Real Estate',
           'asset_group' => 'Add Other Asset',
           'rrsp_account_group' => 'Add RRSP / RIFF Account',
           'nonreg_account_group' => 'Add Non-Registered Account',
-          _ => 'Add more',
+          _ => 'Add',
         };
 
         // Get icon for this group
@@ -351,12 +361,12 @@ Widget _renderLayoutScoped(
             // Don't show icon for unknown groups
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   layout.label,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 2),
                 ...instances.asMap().entries.map((entry) {
               final inst = entry.value;
               final canDelete = def == null
@@ -368,9 +378,9 @@ Widget _renderLayoutScoped(
                 inst: inst,
                 canDelete: canDelete,
                 groupId: layout.groupId!,
+                blockColor: blockColor ?? Colors.grey.shade700,
               );
             }),
-            const SizedBox(height: 2),
             TextButton.icon(
               onPressed: def != null &&
                       def.maxInstances != null &&
@@ -403,6 +413,7 @@ Widget _renderLayoutScoped(
       // Icon case for known groups
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -420,7 +431,6 @@ Widget _renderLayoutScoped(
               ),
             ],
           ),
-          const SizedBox(height: 2),
           ...instances.asMap().entries.map((entry) {
             final inst = entry.value;
             final canDelete = def == null
@@ -432,9 +442,9 @@ Widget _renderLayoutScoped(
               inst: inst,
               canDelete: canDelete,
               groupId: layout.groupId!,
+              blockColor: blockColor ?? Colors.grey.shade700,
             );
           }),
-          const SizedBox(height: 2),
           TextButton.icon(
             onPressed: def != null &&
                     def.maxInstances != null &&
@@ -480,28 +490,43 @@ Widget _renderLayoutScoped(
             break;
           default:
             // Don't show icon for unknown groups
+            // If label is empty, render children directly without wrapper
+            if (layout.label.isEmpty) {
+              if (layout.children.length == 1) {
+                return _renderLayoutScoped(layout.children.first, context,
+                    groupId: groupId, instanceId: instanceId, blockColor: blockColor);
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: layout.children.map((child) => _renderLayoutScoped(child, context,
+                    groupId: groupId, instanceId: instanceId, blockColor: blockColor)).toList(),
+              );
+            }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   layout.label,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
                 ),
                 const SizedBox(height: 2),
                 ...layout.children.map((child) => _renderLayoutScoped(child, context,
-                    groupId: groupId, instanceId: instanceId)),
+                    groupId: groupId, instanceId: instanceId, blockColor: blockColor)),
               ],
             );
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (layout.label.isNotEmpty) ...[
               Row(
                 children: [
                   Icon(
-                    groupIcon,
+                    groupIcon,  
                     size: 20,
                     color: layout.groupId == 'executor_other_info' 
                         ? const Color(0xFFFF9800)
@@ -510,14 +535,14 @@ Widget _renderLayoutScoped(
                   const SizedBox(width: 2),
                   Text(
                     layout.label,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 14),
                   ),
                 ],
               ),
               const SizedBox(height: 1),
             ],
             ...layout.children.map((child) => _renderLayoutScoped(child, context,
-                groupId: groupId, instanceId: instanceId)),
+                groupId: groupId, instanceId: instanceId, blockColor: blockColor)),
           ],
         );
       }
@@ -555,12 +580,14 @@ class _DeletableGroupContainer extends StatefulWidget {
   final GroupInstance inst;
   final bool canDelete;
   final String groupId;
+  final Color blockColor;
 
   const _DeletableGroupContainer({
     required this.layout,
     required this.inst,
     required this.canDelete,
     required this.groupId,
+    required this.blockColor,
   });
 
   @override
@@ -577,13 +604,14 @@ class _DeletableGroupContainerState extends State<_DeletableGroupContainer> {
       margin: const EdgeInsets.only(bottom: 2),
       padding: const EdgeInsets.all(1),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black12),
+        border: Border.all(color: Colors.black, width: 2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Stack(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 2), // Space for the X button
               ...widget.layout.children.map(
@@ -700,7 +728,7 @@ Widget renderTextInput(
       hintText: profile == ValueProfile.dateDdMmYyyy ? 'dd/mm/yyyy' : null,
       errorText: null, // Disable built-in error text
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     ),
     onChanged: (text) {
       final canonical = parseCanonical(profile, text);
@@ -827,6 +855,7 @@ Widget renderChoiceInput(ChoiceInputNode node, BuildContext context,
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
     children: [
       Text(node.label, style: const TextStyle(fontSize: 12)),
       const SizedBox(height: 1),
@@ -904,6 +933,7 @@ Widget renderChoiceInput(ChoiceInputNode node, BuildContext context,
 /// =======================
 /// HELPERS
 /// =======================
+
 
 int _flexFromWidth(AssembledLayout layout) {
   if (layout is AssembledNode) {
