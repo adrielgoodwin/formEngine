@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/case_repository.dart';
@@ -14,6 +15,7 @@ class FormEditorScreen extends StatefulWidget {
 
 class _FormEditorScreenState extends State<FormEditorScreen> {
   bool _isNavigatingAway = false;
+  Timer? _titleUpdateTimer;
 
   void _handleBack() {
     if (_isNavigatingAway) return;
@@ -52,6 +54,53 @@ class _FormEditorScreenState extends State<FormEditorScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Listen for form changes and update title in real-time
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupTitleUpdates();
+    });
+  }
+
+  @override
+  void dispose() {
+    _titleUpdateTimer?.cancel();
+    super.dispose();
+  }
+
+  void _setupTitleUpdates() {
+    final formState = context.read<FormStateProvider>();
+    
+    // Listen directly to the deceased_name text field controller
+    final deceasedNameController = formState.controllerFor(nodeId: 'deceased_name');
+    deceasedNameController.addListener(_onDeceasedNameChanged);
+  }
+
+  void _onDeceasedNameChanged() {
+    // Immediate update for each keystroke
+    _updateCaseTitle();
+  }
+
+  void _updateCaseTitle() {
+    if (_isNavigatingAway || !mounted) return;
+    
+    final formState = context.read<FormStateProvider>();
+    final repository = context.read<CaseRepository>();
+    final currentCase = formState.currentCase;
+    
+    if (currentCase != null) {
+      // Get name directly from the deceased_name controller
+      final deceasedNameController = formState.controllerFor(nodeId: 'deceased_name');
+      final nameValue = deceasedNameController.text.trim();
+      
+      if (nameValue.isNotEmpty && nameValue != currentCase.title) {
+        currentCase.title = nameValue;
+        repository.update(currentCase);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Don't rebuild from state changes while navigating away
     if (_isNavigatingAway) {
@@ -65,6 +114,7 @@ class _FormEditorScreenState extends State<FormEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: kToolbarHeight - 20, // Reduce height by 20px
         title: Text(currentCase?.title ?? 'Edit Case'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
