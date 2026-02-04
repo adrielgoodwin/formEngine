@@ -603,33 +603,7 @@ Future<FormDefinition> loadFormDefinition() async {
               ),
             ],
           ),
-          LayoutRow(
-            id: 'trustee_other_person_row',
-            children: [
-              LayoutNodeRef(
-                id: 'trustee_other_person_ref',
-                nodeId: 'trustee_is_other_person',
-                widthFraction: 0.3,
-              ),
-              LayoutGroup(
-                id: 'trustee_other_person_details_inline',
-                label: '',
-                visibilityCondition: const ChoiceEqualsCondition(
-                  nodeId: 'trustee_is_other_person',
-                  choiceIndex: 0,
-                  expectedValue: true,
-                ),
-                children: [
-                  LayoutNodeRef(
-                    id: 'trustee_relationship_to_trustee_ref',
-                    nodeId: 'trustee_relationship_to_trustee',
-                    widthFraction: 0.7,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Notes field at end of each trustee entry
+                    // Notes field at end of each trustee entry
           LayoutNodeRef(
             id: 'trustee_notes_ref',
             nodeId: 'trustee_notes',
@@ -1150,7 +1124,7 @@ Future<FormDefinition> loadFormDefinition() async {
             ),
             LayoutGroup(
               id: 'trustee_repeatable_group',
-              label: 'Trustees/contact persons',
+              label: '',
               groupId: 'trustee_group',
               children: const [],
             ),

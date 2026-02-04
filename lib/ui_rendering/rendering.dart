@@ -323,12 +323,10 @@ class CollapsibleBlock extends StatelessWidget {
                       padding: const EdgeInsets.only(left: 4, bottom: 4),
                       child: Text(
                         formBlock.title,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: formBlock.getPrimaryColor() != Colors.transparent 
-                              ? formBlock.getPrimaryColor() 
-                              : Colors.black87,
+                          color: Colors.black,
                         ),
                       ),
                     ),
@@ -444,7 +442,7 @@ Widget _renderLayoutScoped(
           }
 
           return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: layout.children.map((child) {
               return Expanded(
                 flex: _flexFromWidth(child),
