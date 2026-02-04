@@ -11,6 +11,7 @@ import 'demo_seed.dart';
 import 'logging/app_logger.dart';
 import 'pages/dashboard_screen.dart';
 import 'state/form_state.dart';
+import 'state/layout_preferences.dart';
 
 void main() {
   // Initialize logger early, before any Flutter bindings
@@ -52,6 +53,9 @@ void main() {
             ),
             ChangeNotifierProvider(
               create: (_) => FormStateProvider(repository: repo),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => LayoutPreferences(),
             ),
           ],
           child: const MyApp(),

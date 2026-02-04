@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/form_controllers.dart';
+import '../state/layout_preferences.dart';
 import '../logging/app_logger.dart';
 import '../models/assembler.dart';
 import '../models/form_block.dart';
@@ -64,46 +65,172 @@ Widget renderForm(AssembledForm form, BuildContext context) {
   final blockIds = form.blocks.map((block) => block.id).toList();
   _blockCollapseState.initializeBlocks(blockIds);
   
-  // Group blocks by column
-  final column1Blocks = form.blocks.where((b) => b.formBlock.column == 1).toList();
-  final column2Blocks = form.blocks.where((b) => b.formBlock.column == 2).toList();
-  final column3Blocks = form.blocks.where((b) => b.formBlock.column == 3).toList();
-  
   return ChangeNotifierProvider.value(
     value: _blockCollapseState,
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Column 1
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(3),
-            child: Column(
-              children: column1Blocks.map((block) => renderBlock(block, context)).toList(),
-            ),
-          ),
-        ),
-        // Column 2
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(3),
-            child: Column(
-              children: column2Blocks.map((block) => renderBlock(block, context)).toList(),
-            ),
-          ),
-        ),
-        // Column 3
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(3),
-            child: Column(
-              children: column3Blocks.map((block) => renderBlock(block, context)).toList(),
-            ),
-          ),
-        ),
-      ],
-    ),
+    child: FormLayoutOrchestrator(form: form),
   );
+}
+
+/// =======================
+/// LAYOUT ORCHESTRATION
+/// =======================
+
+/// Centralized layout orchestrator that handles 1/2/3 column modes.
+/// 
+/// This widget owns the column distribution logic and provides a single
+/// scroll view to avoid independent scrolling per column. Blocks remain
+/// layout-agnostic - they don't know which column mode is active.
+class FormLayoutOrchestrator extends StatelessWidget {
+  final AssembledForm form;
+
+  const FormLayoutOrchestrator({super.key, required this.form});
+
+  @override
+  Widget build(BuildContext context) {
+    final layoutPrefs = context.watch<LayoutPreferences>();
+    final columnCount = layoutPrefs.layoutMode.columnCount;
+    final showBackgrounds = layoutPrefs.showBackgroundColors;
+
+    // Group blocks by their assigned column (1, 2, or 3)
+    final column1Blocks = form.blocks.where((b) => b.formBlock.column == 1).toList();
+    final column2Blocks = form.blocks.where((b) => b.formBlock.column == 2).toList();
+    final column3Blocks = form.blocks.where((b) => b.formBlock.column == 3).toList();
+
+    // Build column widgets based on current layout mode
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(3),
+      child: _buildLayoutForMode(
+        columnCount: columnCount,
+        column1Blocks: column1Blocks,
+        column2Blocks: column2Blocks,
+        column3Blocks: column3Blocks,
+        showBackgrounds: showBackgrounds,
+        context: context,
+      ),
+    );
+  }
+
+  Widget _buildLayoutForMode({
+    required int columnCount,
+    required List<AssembledBlock> column1Blocks,
+    required List<AssembledBlock> column2Blocks,
+    required List<AssembledBlock> column3Blocks,
+    required bool showBackgrounds,
+    required BuildContext context,
+  }) {
+    switch (columnCount) {
+      case 1:
+        // Single column: custom ordering
+        // Order: 1. Deceased, 2. Trustees, 3. Other Professionals, 4. Documents, 5. Tax History, 6. Asset Details
+        final deceasedBlocks = column1Blocks.where((b) => b.id.contains('deceased')).toList();
+        final trusteeBlocks = column1Blocks.where((b) => b.id.contains('trustee')).toList();
+        final professionalBlocks = column2Blocks.where((b) => b.id.contains('professional')).toList();
+        final documentBlocks = column2Blocks.where((b) => b.id.contains('document')).toList();
+        final taxBlocks = column2Blocks.where((b) => b.id.contains('tax')).toList();
+        final assetBlocks = column3Blocks.where((b) => b.id.contains('asset')).toList();
+        
+        final orderedBlocks = [
+          ...deceasedBlocks,
+          ...trusteeBlocks,
+          ...professionalBlocks,
+          ...documentBlocks,
+          ...taxBlocks,
+          ...assetBlocks,
+        ];
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: orderedBlocks
+              .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+              .toList(),
+        );
+
+      case 2:
+        // Two columns: custom ordering
+        // Column 1 (left): Deceased + Trustees + Professionals + Documents
+        // Column 2 (right): Tax History + Asset Details
+        final deceasedBlocks = column1Blocks.where((b) => b.id.contains('deceased')).toList();
+        final trusteeBlocks = column1Blocks.where((b) => b.id.contains('trustee')).toList();
+        final professionalBlocks = column2Blocks.where((b) => b.id.contains('professional')).toList();
+        final documentBlocks = column2Blocks.where((b) => b.id.contains('document')).toList();
+        final taxBlocks = column2Blocks.where((b) => b.id.contains('tax')).toList();
+        final assetBlocks = column3Blocks.where((b) => b.id.contains('asset')).toList();
+        
+        final leftBlocks = _interleaveBlocks([deceasedBlocks, trusteeBlocks, professionalBlocks, documentBlocks]);
+        final rightBlocks = _interleaveBlocks([taxBlocks, assetBlocks]);
+        
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: leftBlocks
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .toList(),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                children: rightBlocks
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .toList(),
+              ),
+            ),
+          ],
+        );
+
+      case 3:
+      default:
+        // Three columns: each column in its own slot
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: column1Blocks
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .toList(),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                children: column2Blocks
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .toList(),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                children: column3Blocks
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .toList(),
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  /// Interleaves blocks from multiple columns to maintain visual order.
+  /// Takes one block from each non-empty list in round-robin fashion.
+  List<AssembledBlock> _interleaveBlocks(List<List<AssembledBlock>> columns) {
+    final result = <AssembledBlock>[];
+    final iterators = columns.map((c) => c.iterator).toList();
+    final active = List<bool>.filled(columns.length, true);
+
+    while (active.any((a) => a)) {
+      for (int i = 0; i < iterators.length; i++) {
+        if (active[i]) {
+          if (iterators[i].moveNext()) {
+            result.add(iterators[i].current);
+          } else {
+            active[i] = false;
+          }
+        }
+      }
+    }
+    return result;
+  }
 }
 
 /// =======================
@@ -113,11 +240,13 @@ Widget renderForm(AssembledForm form, BuildContext context) {
 class CollapsibleBlock extends StatelessWidget {
   final AssembledBlock block;
   final BuildContext context;
+  final bool showBackgroundColor;
 
   const CollapsibleBlock({
     super.key,
     required this.block,
     required this.context,
+    this.showBackgroundColor = true,
   });
 
   @override
@@ -128,6 +257,7 @@ class CollapsibleBlock extends StatelessWidget {
         final formBlock = block.formBlock;
         
         // Create border styling based on block configuration
+        // Borders always remain colored regardless of showBackgroundColor
         BorderSide? leftBorder;
         BorderSide? otherBorders;
         
@@ -149,6 +279,18 @@ class CollapsibleBlock extends StatelessWidget {
               otherBorders = null;
         }
 
+        // Background shadow only shown when showBackgroundColor is true
+        final boxShadow = showBackgroundColor
+            ? [
+                BoxShadow(
+                  color: formBlock.getPrimaryColor().withValues(alpha: 0.2),
+                  offset: const Offset(-2, -2),
+                  blurRadius: 4,
+                  spreadRadius: 0,
+                ),
+              ]
+            : <BoxShadow>[];
+
         return Card(
           elevation: 1,
           margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
@@ -167,14 +309,7 @@ class CollapsibleBlock extends StatelessWidget {
                 topLeft: Radius.circular(4),
                 bottomLeft: Radius.circular(4),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: formBlock.getPrimaryColor().withValues(alpha: 0.2),
-                  offset: const Offset(-2, -2),
-                  blurRadius: 4,
-                  spreadRadius: 0,
-                ),
-              ],
+              boxShadow: boxShadow,
             ),
             child: Padding(
               padding: const EdgeInsets.all(2),
@@ -182,7 +317,21 @@ class CollapsibleBlock extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Always show content (no headers)
+                  // Block header - only render if title is non-empty
+                  if (formBlock.title.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 4),
+                      child: Text(
+                        formBlock.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: formBlock.getPrimaryColor() != Colors.transparent 
+                              ? formBlock.getPrimaryColor() 
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
                   isAssets
                       ? _renderAssetBlockLayout(block.layout, context, blockColor: formBlock.getPrimaryColor())
                       : renderLayout(block.layout, context, blockColor: formBlock.getPrimaryColor()),
@@ -196,8 +345,8 @@ class CollapsibleBlock extends StatelessWidget {
   }
 }
 
-Widget renderBlock(AssembledBlock block, BuildContext context) {
-  return CollapsibleBlock(block: block, context: context);
+Widget renderBlock(AssembledBlock block, BuildContext context, {bool showBackgrounds = true}) {
+  return CollapsibleBlock(block: block, context: context, showBackgroundColor: showBackgrounds);
 }
 
 Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context, {Color? blockColor}) {
@@ -395,11 +544,11 @@ Widget _renderLayoutScoped(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: const Size(0, 24),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                overlayColor: MaterialStateColor.resolveWith((states) {
-                  if (states.contains(MaterialState.pressed)) {
+                overlayColor: WidgetStateColor.resolveWith((states) {
+                  if (states.contains(WidgetState.pressed)) {
                     return Colors.transparent;
                   }
-                  if (states.contains(MaterialState.hovered)) {
+                  if (states.contains(WidgetState.hovered)) {
                     return Colors.black.withOpacity(0.04);
                   }
                   return Colors.transparent;
@@ -459,11 +608,11 @@ Widget _renderLayoutScoped(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               minimumSize: const Size(0, 24),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              overlayColor: MaterialStateColor.resolveWith((states) {
-                if (states.contains(MaterialState.pressed)) {
+              overlayColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
                   return Colors.transparent;
                 }
-                if (states.contains(MaterialState.hovered)) {
+                if (states.contains(WidgetState.hovered)) {
                   return Colors.black.withOpacity(0.04);
                 }
                 return Colors.transparent;

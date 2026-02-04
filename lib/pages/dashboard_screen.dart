@@ -231,11 +231,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     elevation: 2,
                     shadowColor: Colors.black26,
                     surfaceTintColor: Colors.transparent,
-                    overlayColor: MaterialStateColor.resolveWith((states) {
-                      if (states.contains(MaterialState.pressed)) {
+                    overlayColor: WidgetStateColor.resolveWith((states) {
+                      if (states.contains(WidgetState.pressed)) {
                         return Colors.transparent;
                       }
-                      if (states.contains(MaterialState.hovered)) {
+                      if (states.contains(WidgetState.hovered)) {
                         return Colors.black.withOpacity(0.04);
                       }
                       return Colors.transparent;
@@ -436,11 +436,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       TextButton(
                                         onPressed: () => _openCase(context, caseRecord),
                                         style: TextButton.styleFrom(
-                                          overlayColor: MaterialStateColor.resolveWith((states) {
-                                            if (states.contains(MaterialState.pressed)) {
+                                          overlayColor: WidgetStateColor.resolveWith((states) {
+                                            if (states.contains(WidgetState.pressed)) {
                                               return Colors.transparent;
                                             }
-                                            if (states.contains(MaterialState.hovered)) {
+                                            if (states.contains(WidgetState.hovered)) {
                                               return Colors.black.withOpacity(0.04);
                                             }
                                             return Colors.transparent;
@@ -451,11 +451,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     TextButton(
                                 onPressed: () => _runReport(context, caseRecord),
                                 style: TextButton.styleFrom(
-                                  overlayColor: MaterialStateColor.resolveWith((states) {
-                                    if (states.contains(MaterialState.pressed)) {
+                                  overlayColor: WidgetStateColor.resolveWith((states) {
+                                    if (states.contains(WidgetState.pressed)) {
                                       return Colors.transparent;
                                     }
-                                    if (states.contains(MaterialState.hovered)) {
+                                    if (states.contains(WidgetState.hovered)) {
                                       return Colors.black.withOpacity(0.04);
                                     }
                                     return Colors.transparent;
@@ -471,11 +471,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   );
                                 },
                                 style: TextButton.styleFrom(
-                                  overlayColor: MaterialStateColor.resolveWith((states) {
-                                    if (states.contains(MaterialState.pressed)) {
+                                  overlayColor: WidgetStateColor.resolveWith((states) {
+                                    if (states.contains(WidgetState.pressed)) {
                                       return Colors.transparent;
                                     }
-                                    if (states.contains(MaterialState.hovered)) {
+                                    if (states.contains(WidgetState.hovered)) {
                                       return Colors.black.withOpacity(0.04);
                                     }
                                     return Colors.transparent;
@@ -690,11 +690,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
-              overlayColor: MaterialStateColor.resolveWith((states) {
-                if (states.contains(MaterialState.pressed)) {
+              overlayColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
                   return Colors.transparent;
                 }
-                if (states.contains(MaterialState.hovered)) {
+                if (states.contains(WidgetState.hovered)) {
                   return Colors.black.withOpacity(0.04);
                 }
                 return Colors.transparent;
@@ -790,11 +790,11 @@ class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
-              overlayColor: MaterialStateColor.resolveWith((states) {
-                if (states.contains(MaterialState.pressed)) {
+              overlayColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
                   return Colors.transparent;
                 }
-                if (states.contains(MaterialState.hovered)) {
+                if (states.contains(WidgetState.hovered)) {
                   return Colors.black.withOpacity(0.04);
                 }
                 return Colors.transparent;
@@ -818,11 +818,11 @@ class _DeletableCaseButtonState extends State<_DeletableCaseButton> {
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
-              overlayColor: MaterialStateColor.resolveWith((states) {
-                if (states.contains(MaterialState.pressed)) {
+              overlayColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
                   return Colors.transparent;
                 }
-                if (states.contains(MaterialState.hovered)) {
+                if (states.contains(WidgetState.hovered)) {
                   return Colors.red.withOpacity(0.04);
                 }
                 return Colors.transparent;

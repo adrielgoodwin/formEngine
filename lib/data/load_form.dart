@@ -176,6 +176,17 @@ Future<FormDefinition> loadFormDefinition() async {
         id: 'trustee_relationship_to_trustee',
         label: 'Relationship to trustee',
       ),
+      'trustee_is_trustee': ChoiceInputNode(
+        id: 'trustee_is_trustee',
+        label: 'Trustee?',
+        choiceLabels: ['Yes', 'No'],
+        choiceCardinality: ChoiceCardinality.single,
+      ),
+      'trustee_notes': TextInputNode(
+        id: 'trustee_notes',
+        label: 'Notes',
+        multiLine: true,
+      ),
 
       // ===== Block 3 — Other Professionals (Repeatable) =====
       'professional_profession': TextInputNode(
@@ -193,6 +204,11 @@ Future<FormDefinition> loadFormDefinition() async {
       'professional_phone': TextInputNode(
         id: 'professional_phone',
         label: 'Phone',
+      ),
+      'professional_notes': TextInputNode(
+        id: 'professional_notes',
+        label: 'Notes',
+        multiLine: true,
       ),
 
       // ===== Block 4 — Documents (RRN) =====
@@ -491,9 +507,13 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'tax_credits': ChoiceInputNode(
         id: 'tax_credits',
-        label: 'Tax Credits',
-        choiceLabels: ['Donations', 'Medical', 'DTC'],
+        label: 'Tax credits/deductions',
+        choiceLabels: ['Donations', 'Medical', 'DTC', 'Other'],
         choiceCardinality: ChoiceCardinality.multiple,
+      ),
+      'tax_credits_other_notes': TextInputNode(
+        id: 'tax_credits_other_notes',
+        label: 'Other notes',
       ),
       'tax_credits_notes': TextInputNode(
         id: 'tax_credits_notes',
@@ -505,10 +525,16 @@ Future<FormDefinition> loadFormDefinition() async {
 
       'trustee_group': NodeGroupDefinition(
         id: 'trustee_group',
-        label: 'Trustee',
+        label: 'Trustee/Contact Person',
         repeatable: true,
         minInstances: 1,
         children: [
+          // Trustee? Yes/No as first field
+          LayoutNodeRef(
+            id: 'trustee_is_trustee_ref',
+            nodeId: 'trustee_is_trustee',
+            widthFraction: 0.3,
+          ),
           LayoutRow(
             id: 'trustee_row_1',
             children: [
@@ -534,32 +560,44 @@ Future<FormDefinition> loadFormDefinition() async {
             nodeId: 'trustee_address',
             widthFraction: 1.0,
           ),
-          LayoutRow(
-            id: 'trustee_compensation_row',
+          // Compensation section - only visible when Trustee? = Yes
+          LayoutGroup(
+            id: 'trustee_compensation_section',
+            label: '',
+            visibilityCondition: const ChoiceEqualsCondition(
+              nodeId: 'trustee_is_trustee',
+              choiceIndex: 0, // Yes
+              expectedValue: true,
+            ),
             children: [
-              LayoutNodeRef(
-                id: 'trustee_compensation_ref',
-                nodeId: 'trustee_wants_compensation',
-                widthFraction: 0.3,
-              ),
-              LayoutGroup(
-                id: 'trustee_compensation_details_inline',
-                label: '',
-                visibilityCondition: const ChoiceEqualsCondition(
-                  nodeId: 'trustee_wants_compensation',
-                  choiceIndex: 0,
-                  expectedValue: true,
-                ),
+              LayoutRow(
+                id: 'trustee_compensation_row',
                 children: [
                   LayoutNodeRef(
-                    id: 'trustee_sin_ref',
-                    nodeId: 'trustee_sin',
+                    id: 'trustee_compensation_ref',
+                    nodeId: 'trustee_wants_compensation',
                     widthFraction: 0.3,
                   ),
-                  LayoutNodeRef(
-                    id: 'trustee_income_notes_ref',
-                    nodeId: 'trustee_income_notes',
-                    widthFraction: 0.4,
+                  LayoutGroup(
+                    id: 'trustee_compensation_details_inline',
+                    label: '',
+                    visibilityCondition: const ChoiceEqualsCondition(
+                      nodeId: 'trustee_wants_compensation',
+                      choiceIndex: 0,
+                      expectedValue: true,
+                    ),
+                    children: [
+                      LayoutNodeRef(
+                        id: 'trustee_sin_ref',
+                        nodeId: 'trustee_sin',
+                        widthFraction: 0.3,
+                      ),
+                      LayoutNodeRef(
+                        id: 'trustee_income_notes_ref',
+                        nodeId: 'trustee_income_notes',
+                        widthFraction: 0.4,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -590,6 +628,12 @@ Future<FormDefinition> loadFormDefinition() async {
                 ],
               ),
             ],
+          ),
+          // Notes field at end of each trustee entry
+          LayoutNodeRef(
+            id: 'trustee_notes_ref',
+            nodeId: 'trustee_notes',
+            widthFraction: 1.0,
           ),
         ],
       ),
@@ -629,6 +673,12 @@ Future<FormDefinition> loadFormDefinition() async {
                 widthFraction: 0.5,
               ),
             ],
+          ),
+          // Notes field at end of each professional entry
+          LayoutNodeRef(
+            id: 'professional_notes_ref',
+            nodeId: 'professional_notes',
+            widthFraction: 1.0,
           ),
         ],
       ),
@@ -1060,7 +1110,7 @@ Future<FormDefinition> loadFormDefinition() async {
 
       FormBlock(
         id: 'block_trustee_contact_persons',
-        title: 'Trustee and Contact Persons',
+        title: 'Trustees/Contact Persons',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.executor,
         column: 1,
@@ -1219,10 +1269,31 @@ Future<FormDefinition> loadFormDefinition() async {
                   nodeId: 'tax_income_notes',
                   widthFraction: 1.0,
                 ),
-                LayoutNodeRef(
-                  id: 'tax_credits_ref',
-                  nodeId: 'tax_credits',
-                  widthFraction: 1.0,
+                LayoutRow(
+                  id: 'tax_credits_row',
+                  children: [
+                    LayoutNodeRef(
+                      id: 'tax_credits_ref',
+                      nodeId: 'tax_credits',
+                      widthFraction: 0.5,
+                    ),
+                    LayoutGroup(
+                      id: 'tax_credits_other_inline',
+                      label: '',
+                      visibilityCondition: const ChoiceEqualsCondition(
+                        nodeId: 'tax_credits',
+                        choiceIndex: 3, // "Other" is index 3
+                        expectedValue: true,
+                      ),
+                      children: [
+                        LayoutNodeRef(
+                          id: 'tax_credits_other_notes_ref',
+                          nodeId: 'tax_credits_other_notes',
+                          widthFraction: 0.5,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 LayoutNodeRef(
                   id: 'tax_credits_notes_ref',
@@ -1702,8 +1773,28 @@ Future<FormDefinition> loadFormDefinition() async {
         valueKind: ValueKind.stringList,
         profile: ValueProfile.plainText,
       ),
+      'tax_credits_other_notes': DataSpec(
+        formNodeID: 'tax_credits_other_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
       'tax_credits_notes': DataSpec(
         formNodeID: 'tax_credits_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_is_trustee': DataSpec(
+        formNodeID: 'trustee_is_trustee',
+        valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'trustee_notes': DataSpec(
+        formNodeID: 'trustee_notes',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.plainText,
+      ),
+      'professional_notes': DataSpec(
+        formNodeID: 'professional_notes',
         valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
