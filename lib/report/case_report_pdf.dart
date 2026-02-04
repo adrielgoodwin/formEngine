@@ -135,6 +135,37 @@ Future<Uint8List> buildCasePdf(CaseRecord record, FormDefinition def) async {
 }
 
 // =============================================================================
+// Block Ordering (matches single-column UI layout)
+// =============================================================================
+
+/// Orders blocks to match the single-column UI layout:
+/// 1. Deceased, 2. Trustees, 3. Professionals, 4. Documents, 5. Tax History, 6. Assets
+List<FormBlock> _orderBlocksForPdf(List<FormBlock> blocks) {
+  final blockMap = {for (final b in blocks) b.id: b};
+  
+  // Define explicit order matching single-column UI
+  final orderedIds = [
+    'block_deceased_information',
+    'block_trustee_contact_persons',
+    'block_other_professionals',
+    'block_documents',
+    'block_tax_history',
+    'block_asset_details',
+  ];
+  
+  final result = <FormBlock>[];
+  for (final id in orderedIds) {
+    final block = blockMap.remove(id);
+    if (block != null) result.add(block);
+  }
+  
+  // Append any remaining blocks not in the explicit list (future-proofing)
+  result.addAll(blockMap.values);
+  
+  return result;
+}
+
+// =============================================================================
 // Build PDF Elements from Form Structure
 // =============================================================================
 
@@ -142,7 +173,14 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
   final elements = <PdfElement>[];
   final renderedNodeIds = <String>{};
 
-  for (final block in def.blocks) {
+  // Order blocks to match single-column UI layout:
+  // 1. Deceased, 2. Trustees, 3. Professionals, 4. Documents, 5. Tax History, 6. Assets
+  final orderedBlocks = _orderBlocksForPdf(def.blocks);
+
+  for (final block in orderedBlocks) {
+    // Skip blocks with empty titles (shouldn't happen, but defensive)
+    if (block.title.isEmpty) continue;
+    
     // Convert Flutter Color to PDF Color
     PdfColor? blockColor;
     if (block.colorScheme != BlockColorScheme.none) {
@@ -158,7 +196,7 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
       instance.values,
       renderedNodeIds,
     ));
-    elements.add(PdfSpacer(12));
+    elements.add(PdfSpacer(6));
   }
 
   final remaining = _buildRemainingFieldEntries(def, instance, renderedNodeIds);
@@ -598,24 +636,40 @@ List<PdfFieldRow> _packFieldsIntoRows(List<FieldEntry> entries) {
 pw.Widget _renderPdfElement(PdfElement element) {
   switch (element) {
     case PdfSectionHeader():
-      final textColor = element.level == 1 && element.color != null 
-          ? element.color! 
-          : (element.level == 1 ? PdfColors.black : PdfColors.grey800);
-      
-      return pw.Container(
-        margin: pw.EdgeInsets.only(
-          top: element.level == 1 ? 8 : 6,
-          bottom: element.level == 1 ? 4 : 2,
-        ),
-        child: pw.Text(
-          element.title,
-          style: pw.TextStyle(
-            fontSize: element.level == 1 ? 13 : 10,
-            fontWeight: pw.FontWeight.bold,
-            color: textColor,
+      if (element.level == 1) {
+        // Level 1: Colored background band for block headers
+        final textColor = element.color != null ? PdfColors.white : PdfColors.black;
+        
+        return pw.Container(
+          margin: const pw.EdgeInsets.only(top: 6, bottom: 3),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: pw.BoxDecoration(
+            color: element.color ?? PdfColors.grey300,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
           ),
-        ),
-      );
+          child: pw.Text(
+            element.title,
+            style: pw.TextStyle(
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        );
+      } else {
+        // Level 2: Subsection headers (groups, repeatable instances)
+        return pw.Container(
+          margin: const pw.EdgeInsets.only(top: 4, bottom: 2),
+          child: pw.Text(
+            element.title,
+            style: pw.TextStyle(
+              fontSize: 9,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.grey700,
+            ),
+          ),
+        );
+      }
 
     case PdfFieldRow():
       return _renderFieldRow(element.entries);

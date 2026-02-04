@@ -155,6 +155,26 @@ class _FormEditorScreenState extends State<FormEditorScreen> {
             onPressed: () => layoutPrefs.setLayoutMode(LayoutMode.threeColumn),
           ),
           const SizedBox(width: 8),
+          // Spacing density buttons
+          _LayoutModeButton(
+            icon: Icons.density_small,
+            tooltip: 'Tight spacing',
+            isSelected: layoutPrefs.spacingDensity == SpacingDensity.tight,
+            onPressed: () => layoutPrefs.setSpacingDensity(SpacingDensity.tight),
+          ),
+          _LayoutModeButton(
+            icon: Icons.density_medium,
+            tooltip: 'Normal spacing',
+            isSelected: layoutPrefs.spacingDensity == SpacingDensity.normal,
+            onPressed: () => layoutPrefs.setSpacingDensity(SpacingDensity.normal),
+          ),
+          _LayoutModeButton(
+            icon: Icons.density_large,
+            tooltip: 'Spacious',
+            isSelected: layoutPrefs.spacingDensity == SpacingDensity.spacious,
+            onPressed: () => layoutPrefs.setSpacingDensity(SpacingDensity.spacious),
+          ),
+          const SizedBox(width: 8),
           // Color toggle button
           _LayoutModeButton(
             icon: showColors ? Icons.palette : Icons.palette_outlined,

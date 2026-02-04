@@ -90,6 +90,7 @@ class FormLayoutOrchestrator extends StatelessWidget {
     final layoutPrefs = context.watch<LayoutPreferences>();
     final columnCount = layoutPrefs.layoutMode.columnCount;
     final showBackgrounds = layoutPrefs.showBackgroundColors;
+    final metrics = layoutPrefs.densityMetrics;
 
     // Group blocks by their assigned column (1, 2, or 3)
     final column1Blocks = form.blocks.where((b) => b.formBlock.column == 1).toList();
@@ -98,13 +99,14 @@ class FormLayoutOrchestrator extends StatelessWidget {
 
     // Build column widgets based on current layout mode
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(metrics.formPadding),
       child: _buildLayoutForMode(
         columnCount: columnCount,
         column1Blocks: column1Blocks,
         column2Blocks: column2Blocks,
         column3Blocks: column3Blocks,
         showBackgrounds: showBackgrounds,
+        metrics: metrics,
         context: context,
       ),
     );
@@ -116,6 +118,7 @@ class FormLayoutOrchestrator extends StatelessWidget {
     required List<AssembledBlock> column2Blocks,
     required List<AssembledBlock> column3Blocks,
     required bool showBackgrounds,
+    required DensityMetrics metrics,
     required BuildContext context,
   }) {
     switch (columnCount) {
@@ -141,7 +144,7 @@ class FormLayoutOrchestrator extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: orderedBlocks
-              .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+              .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds, metrics: metrics))
               .toList(),
         );
 
@@ -165,14 +168,14 @@ class FormLayoutOrchestrator extends StatelessWidget {
             Expanded(
               child: Column(
                 children: leftBlocks
-                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds, metrics: metrics))
                     .toList(),
               ),
             ),
             Expanded(
               child: Column(
                 children: rightBlocks
-                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds, metrics: metrics))
                     .toList(),
               ),
             ),
@@ -188,21 +191,21 @@ class FormLayoutOrchestrator extends StatelessWidget {
             Expanded(
               child: Column(
                 children: column1Blocks
-                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds, metrics: metrics))
                     .toList(),
               ),
             ),
             Expanded(
               child: Column(
                 children: column2Blocks
-                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds, metrics: metrics))
                     .toList(),
               ),
             ),
             Expanded(
               child: Column(
                 children: column3Blocks
-                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds))
+                    .map((block) => renderBlock(block, context, showBackgrounds: showBackgrounds, metrics: metrics))
                     .toList(),
               ),
             ),
@@ -241,11 +244,13 @@ class CollapsibleBlock extends StatelessWidget {
   final AssembledBlock block;
   final BuildContext context;
   final bool showBackgroundColor;
+  final DensityMetrics metrics;
 
   const CollapsibleBlock({
     super.key,
     required this.block,
     required this.context,
+    required this.metrics,
     this.showBackgroundColor = true,
   });
 
@@ -293,7 +298,10 @@ class CollapsibleBlock extends StatelessWidget {
 
         return Card(
           elevation: 1,
-          margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+          margin: EdgeInsets.symmetric(
+            vertical: metrics.blockVerticalMargin,
+            horizontal: metrics.blockHorizontalMargin,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(4),
             side: otherBorders ?? BorderSide.none,
@@ -312,7 +320,7 @@ class CollapsibleBlock extends StatelessWidget {
               boxShadow: boxShadow,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(2),
+              padding: EdgeInsets.all(metrics.blockInternalPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -320,7 +328,7 @@ class CollapsibleBlock extends StatelessWidget {
                   // Block header - only render if title is non-empty
                   if (formBlock.title.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 4),
+                      padding: EdgeInsets.only(left: 4, bottom: metrics.headerBottomPadding),
                       child: Text(
                         formBlock.title,
                         style: const TextStyle(
@@ -343,11 +351,14 @@ class CollapsibleBlock extends StatelessWidget {
   }
 }
 
-Widget renderBlock(AssembledBlock block, BuildContext context, {bool showBackgrounds = true}) {
-  return CollapsibleBlock(block: block, context: context, showBackgroundColor: showBackgrounds);
+Widget renderBlock(AssembledBlock block, BuildContext context, {bool showBackgrounds = true, required DensityMetrics metrics}) {
+  return CollapsibleBlock(block: block, context: context, showBackgroundColor: showBackgrounds, metrics: metrics);
 }
 
 Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context, {Color? blockColor}) {
+  final layoutPrefs = context.watch<LayoutPreferences>();
+  final metrics = layoutPrefs.densityMetrics;
+  
   if (layout is AssembledColumn) {
     final children = layout.children;
     return Column(
@@ -356,9 +367,9 @@ Widget _renderAssetBlockLayout(AssembledLayout layout, BuildContext context, {Co
         for (var i = 0; i < children.length; i++) ...[
           _renderLayoutScoped(children[i], context, groupId: null, instanceId: null, blockColor: blockColor),
           if (i != children.length - 1) ...[
-            const SizedBox(height: 2),
+            SizedBox(height: metrics.dividerVerticalSpacing),
             const Divider(thickness: 1, color: Colors.black12),
-            const SizedBox(height: 2),
+            SizedBox(height: metrics.dividerVerticalSpacing),
           ],
         ],
       ],
@@ -384,6 +395,8 @@ Widget _renderLayoutScoped(
   Color? blockColor,
 }) {
   final formState = context.watch<FormStateProvider>();
+  final layoutPrefs = context.watch<LayoutPreferences>();
+  final metrics = layoutPrefs.densityMetrics;
   
   // Guard against null formInstance during navigation
   final formInstance = formState.formInstance;
@@ -422,8 +435,8 @@ Widget _renderLayoutScoped(
             // Use Wrap on narrow widths so rows (notably RRN) don't collapse
             // into awkward spacing; still respects widthFraction.
             return Wrap(
-              spacing: 6,
-              runSpacing: 2,
+              spacing: metrics.fieldGap,
+              runSpacing: metrics.rowGap,
               children: layout.children.map((child) {
                 final fraction = child is AssembledNode ? child.widthFraction : 1.0;
                 final width = (maxWidth * fraction).clamp(200.0, maxWidth);
@@ -447,7 +460,7 @@ Widget _renderLayoutScoped(
               return Expanded(
                 flex: _flexFromWidth(child),
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 6),
+                  padding: EdgeInsets.only(right: metrics.fieldGap),
                   child: _renderLayoutScoped(child, context,
                       groupId: groupId, instanceId: instanceId, blockColor: blockColor),
                 ),
@@ -461,12 +474,19 @@ Widget _renderLayoutScoped(
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
-        children: layout.children
-            .map(
-              (child) => _renderLayoutScoped(child, context,
-                    groupId: groupId, instanceId: instanceId, blockColor: blockColor),
-            )
-            .toList(),
+        children: [
+          for (var i = 0; i < layout.children.length; i++) ...[
+            _renderLayoutScoped(
+              layout.children[i],
+              context,
+              groupId: groupId,
+              instanceId: instanceId,
+              blockColor: blockColor,
+            ),
+            if (i != layout.children.length - 1)
+              SizedBox(height: metrics.rowGap),
+          ],
+        ],
       );
 
     case AssembledGroup():
@@ -832,6 +852,9 @@ Widget renderTextInput(
 }) {
   // Use read() for one-time access to avoid rebuilding on every state change
   final formState = context.read<FormStateProvider>();
+  final metrics = context.select<LayoutPreferences, DensityMetrics>(
+    (prefs) => prefs.densityMetrics,
+  );
   final controller = formState.controllerFor(
     nodeId: node.id,
     groupId: groupId,
@@ -875,7 +898,10 @@ Widget renderTextInput(
       hintText: profile == ValueProfile.dateDdMmYyyy ? 'dd/mm/yyyy' : null,
       errorText: null, // Disable built-in error text
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: metrics.blockInternalPadding,
+      ),
     ),
     onChanged: (text) {
       final canonical = parseCanonical(profile, text);
@@ -922,7 +948,7 @@ Widget renderTextInput(
       textField,
       if (errorText != null)
         Padding(
-          padding: const EdgeInsets.only(top: 2),
+          padding: EdgeInsets.only(top: metrics.rowGap),
           child: Text(
             errorText,
             style: const TextStyle(color: Colors.red, fontSize: 10),
