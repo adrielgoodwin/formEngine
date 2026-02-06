@@ -1,9 +1,7 @@
-import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import '../data/case_repository.dart';
-import '../models/form_instance.dart';
 import '../state/form_state.dart';
 import '../state/layout_preferences.dart';
 import '../ui_rendering/rendering.dart';
@@ -15,90 +13,145 @@ class FormEditorScreen extends StatefulWidget {
   State<FormEditorScreen> createState() => _FormEditorScreenState();
 }
 
-class _FormEditorScreenState extends State<FormEditorScreen> {
+class _FormEditorScreenState extends State<FormEditorScreen>
+    with WidgetsBindingObserver {
   bool _isNavigatingAway = false;
-  Timer? _titleUpdateTimer;
+  bool _dialogOpen = false;
 
-  void _handleBack() {
-    if (_isNavigatingAway) return;
-    
-    setState(() {
-      _isNavigatingAway = true;
-    });
-
-    final formState = context.read<FormStateProvider>();
-    final repository = context.read<CaseRepository>();
-    final currentCase = formState.currentCase;
-
-    // Update case before leaving - wrapped in try-catch to ensure navigation happens
-    try {
-      if (currentCase != null) {
-        final formInstance = formState.formInstance;
-        if (formInstance != null) {
-          final nameValue = _deriveTitleFromInstance(formInstance);
-          if (nameValue != null) {
-            currentCase.title = nameValue;
-          }
-        }
-        repository.update(currentCase);
-      }
-    } catch (e) {
-      // Log but don't block navigation - file may be locked by another user
-      debugPrint('Failed to save case on back: $e');
-    }
-
-    Navigator.of(context).pop();
-    
-    // Unload after navigation completes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      formState.unloadCase();
-    });
-  }
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
 
   @override
   void initState() {
     super.initState();
-    // Listen for form changes and update title in real-time
+    WidgetsBinding.instance.addObserver(this);
+    // Keep AppBar title in sync with deceased_name (in-memory only, no persist)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setupTitleUpdates();
+      _setupTitleTracking();
     });
   }
 
   @override
   void dispose() {
-    _titleUpdateTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  void _setupTitleUpdates() {
+  // ---------------------------------------------------------------------------
+  // Window close interception (macOS / Windows)
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
     final formState = context.read<FormStateProvider>();
-    
-    // Listen directly to the deceased_name text field controller
-    final deceasedNameController = formState.controllerFor(nodeId: 'deceased_name');
-    deceasedNameController.addListener(_onDeceasedNameChanged);
+    if (!formState.isDirty) return AppExitResponse.exit;
+
+    // Prevent duplicate dialogs
+    if (_dialogOpen) return AppExitResponse.cancel;
+
+    final result = await _showSaveDialog(isWindowClose: true);
+    if (result == _SaveDialogResult.save) {
+      formState.saveNow();
+      formState.unloadCase();
+      return AppExitResponse.exit;
+    } else if (result == _SaveDialogResult.discard) {
+      formState.discardChanges();
+      formState.unloadCase();
+      return AppExitResponse.exit;
+    }
+    // cancel → stay in form
+    return AppExitResponse.cancel;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Back navigation
+  // ---------------------------------------------------------------------------
+
+  Future<void> _handleBack() async {
+    if (_isNavigatingAway) return;
+
+    final formState = context.read<FormStateProvider>();
+
+    if (formState.isDirty) {
+      final result = await _showSaveDialog(isWindowClose: false);
+      if (result == _SaveDialogResult.cancel) return; // stay in form
+
+      if (result == _SaveDialogResult.save) {
+        formState.saveNow();
+      } else {
+        formState.discardChanges();
+      }
+    }
+
+    _navigateBackToDashboard();
+  }
+
+  void _navigateBackToDashboard() {
+    if (_isNavigatingAway) return;
+    setState(() => _isNavigatingAway = true);
+
+    final formState = context.read<FormStateProvider>();
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      formState.unloadCase();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Save / Discard / Cancel dialog
+  // ---------------------------------------------------------------------------
+
+  Future<_SaveDialogResult> _showSaveDialog({required bool isWindowClose}) async {
+    _dialogOpen = true;
+    final result = await showDialog<_SaveDialogResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Unsaved Changes'),
+        content: const Text('You have unsaved changes. What would you like to do?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(_SaveDialogResult.cancel),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(_SaveDialogResult.discard),
+            child: const Text('Discard Changes',
+                style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(_SaveDialogResult.save),
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+    _dialogOpen = false;
+    return result ?? _SaveDialogResult.cancel;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Title tracking (in-memory only — persisted on explicit save)
+  // ---------------------------------------------------------------------------
+
+  void _setupTitleTracking() {
+    final formState = context.read<FormStateProvider>();
+    final controller = formState.controllerFor(nodeId: 'deceased_name');
+    controller.addListener(_onDeceasedNameChanged);
   }
 
   void _onDeceasedNameChanged() {
-    // Immediate update for each keystroke
-    _updateCaseTitle();
-  }
-
-  void _updateCaseTitle() {
     if (_isNavigatingAway || !mounted) return;
-    
     final formState = context.read<FormStateProvider>();
-    final repository = context.read<CaseRepository>();
     final currentCase = formState.currentCase;
-    
-    if (currentCase != null) {
-      // Get name directly from the deceased_name controller
-      final deceasedNameController = formState.controllerFor(nodeId: 'deceased_name');
-      final nameValue = deceasedNameController.text.trim();
-      
-      if (nameValue.isNotEmpty && nameValue != currentCase.title) {
-        currentCase.title = nameValue;
-        repository.update(currentCase);
-      }
+    if (currentCase == null) return;
+
+    final name = formState.controllerFor(nodeId: 'deceased_name').text.trim();
+    if (name.isNotEmpty && name != currentCase.title) {
+      // Update in-memory only — will be persisted on explicit save
+      currentCase.title = name;
+      setState(() {}); // refresh AppBar title
     }
   }
 
@@ -192,17 +245,8 @@ class _FormEditorScreenState extends State<FormEditorScreen> {
   }
 }
 
-String? _deriveTitleFromInstance(FormInstance instance) {
-  for (final entry in instance.values.entries) {
-    if (entry.key.contains('name') && entry.value is String) {
-      final name = entry.value as String;
-      if (name.trim().isNotEmpty) {
-        return name.trim();
-      }
-    }
-  }
-  return null;
-}
+/// Result of the save/discard/cancel dialog.
+enum _SaveDialogResult { save, discard, cancel }
 
 /// Formats a date string as dd/Month/yyyy (e.g., 04/February/2026)
 /// Returns null if the date string is invalid or empty

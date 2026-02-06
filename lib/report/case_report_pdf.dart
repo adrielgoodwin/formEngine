@@ -235,7 +235,7 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
 }
 
 /// Headers to suppress in PDF output (rendered inline instead)
-const _suppressedHeaders = {'Partner Info', 'Professionals'};
+const _suppressedHeaders = {'Partner Info'};
 
 /// Group IDs where dividers go at TOP of each instance (including first)
 const _dividerAtTopGroups = {'trustee_group'};

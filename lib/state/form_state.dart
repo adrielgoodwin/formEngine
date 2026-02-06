@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../data/case_repository.dart';
 import '../data/repository_exceptions.dart';
@@ -13,15 +11,9 @@ import '../models/assembler.dart';
 import '../models/form_definition_validation.dart';
 
 class FormStateProvider extends ChangeNotifier {
-  static const _saveDebounceDuration = Duration(seconds: 2);
-
   final CaseRepository _repository;
   final AppLogger _logger = AppLogger.instance;
-  Timer? _saveTimer;
-  bool _isDisposed = false;
-  bool _savePendingLogged = false;
-  bool _saveInFlight = false;
-  bool _saveQueuedAfterInflight = false;
+  bool _isDirty = false;
 
   AssembledForm? _assembledForm;
   FormDefinition? _formDefinition;
@@ -32,6 +24,9 @@ class FormStateProvider extends ChangeNotifier {
 
   FormStateProvider({required CaseRepository repository})
       : _repository = repository;
+
+  /// Whether the form has unsaved changes.
+  bool get isDirty => _isDirty;
 
   AssembledForm get assembledForm => _assembledForm!;
   FormDefinition get formDefinition => _formDefinition!;
@@ -64,7 +59,7 @@ class FormStateProvider extends ChangeNotifier {
 
   void setNodeValue(String nodeId, dynamic value) {
     _formInstance!.setValue(nodeId, value);
-    _scheduleSave();
+    _markDirty();
     notifyListeners();
   }
 
@@ -78,13 +73,13 @@ class FormStateProvider extends ChangeNotifier {
       }
     }
     _formInstance!.addGroupInstance(groupId);
-    _scheduleSave();
+    _markDirty();
     notifyListeners();
   }
 
   void setGroupNodeValue(String groupId, String instanceId, String nodeId, dynamic value) {
     _formInstance!.setGroupValue(groupId, instanceId, nodeId, value);
-    _scheduleSave();
+    _markDirty();
     notifyListeners();
   }
 
@@ -100,77 +95,75 @@ class FormStateProvider extends ChangeNotifier {
     _controllers?.removeControllersForGroupInstance(groupId, instanceId);
     _controllers?.clearErrorsForGroupInstance(groupId, instanceId);
     _formInstance!.removeGroupInstance(groupId, instanceId);
-    _scheduleSave();
+    _markDirty();
     notifyListeners();
   }
 
-  void _scheduleSave() {
-    if (_isDisposed || _currentCase == null) return;
-    final wasTimerActive = _saveTimer != null;
-    _saveTimer?.cancel();
-    _saveTimer = Timer(_saveDebounceDuration, () => _persistCurrentCase());
-    
-    // Log only when first scheduling a save, not on every reschedule
-    if (!wasTimerActive && !_savePendingLogged) {
-      _savePendingLogged = true;
-      _safeLog('state', 'Autosave scheduled for case ${_currentCase!.id}');
+  void _markDirty() {
+    if (!_isDirty) {
+      _isDirty = true;
+      _safeLog('state', 'Form marked dirty for case ${_currentCase?.id}');
     }
   }
 
-  void _persistCurrentCase({bool force = false}) {
-    if (_isDisposed && !force) return;
+  /// Explicitly saves the current case to the repository.
+  /// Returns true on success, false on failure.
+  bool saveNow() {
     final caseToSave = _currentCase;
-    if (caseToSave == null) return;
+    if (caseToSave == null) return false;
 
-    // Coalesce saves: if one is in-flight, queue one more after it completes
-    if (_saveInFlight) {
-      if (!_saveQueuedAfterInflight) {
-        _saveQueuedAfterInflight = true;
-        _safeLog('state', 'Persist coalesced (in-flight) for case ${caseToSave.id}');
-      }
-      return;
-    }
+    // Derive title from deceased_name before saving
+    _updateCaseTitleFromInstance();
 
-    _saveInFlight = true;
-    _safeLog('state', 'Persist start for case ${caseToSave.id}');
+    _safeLog('state', 'Explicit save for case ${caseToSave.id}');
     try {
       _repository.update(caseToSave);
-      _safeLog('state', 'Persist success for case ${caseToSave.id}');
-      _savePendingLogged = false;
+      _isDirty = false;
+      _safeLog('state', 'Save success for case ${caseToSave.id}');
+      notifyListeners();
+      return true;
     } catch (e, st) {
       if (e is FileLockException) {
-        _safeLogWarn('state', 'Lock contention during persist for case ${caseToSave.id}', error: e);
+        _safeLogWarn('state', 'Lock contention during save for case ${caseToSave.id}', error: e);
       } else {
-        _safeLogError('state', 'Persist failed for case ${caseToSave.id}', error: e, stackTrace: st);
+        _safeLogError('state', 'Save failed for case ${caseToSave.id}', error: e, stackTrace: st);
       }
-    } finally {
-      _saveInFlight = false;
-      
-      // If a save was queued while we were in-flight, run it now
-      if (_saveQueuedAfterInflight) {
-        _saveQueuedAfterInflight = false;
-        _persistCurrentCase(force: force);
-      }
+      return false;
     }
   }
 
-  /// Immediately persists any pending changes. Safe to call at any time.
-  void saveNow() {
-    _saveTimer?.cancel();
-    _saveTimer = null;
-    _savePendingLogged = false;
-    // Don't force if already in-flight, let coalescing handle it
-    _persistCurrentCase(force: !_saveInFlight);
+  /// Discards unsaved changes by reloading the case from the repository.
+  void discardChanges() {
+    final caseToReload = _currentCase;
+    if (caseToReload == null) return;
+
+    _safeLog('state', 'Discarding changes for case ${caseToReload.id}');
+    final fresh = _repository.getById(caseToReload.id);
+    if (fresh != null) {
+      _currentCase = fresh;
+      _formInstance = fresh.formInstance;
+      _controllers?.dispose();
+      _controllers = FormControllers(formInstance: fresh.formInstance);
+    }
+    _isDirty = false;
+    notifyListeners();
+  }
+
+  /// Updates the case title from the deceased_name field value.
+  void _updateCaseTitleFromInstance() {
+    final inst = _formInstance;
+    final caseRecord = _currentCase;
+    if (inst == null || caseRecord == null) return;
+    final name = (inst.getValue<String>('deceased_name') ?? '').trim();
+    if (name.isNotEmpty) {
+      caseRecord.title = name;
+    }
   }
 
   @override
   void dispose() {
-    _isDisposed = true;
-    _saveTimer?.cancel();
-    _saveTimer = null;
     final caseId = _currentCase?.id;
-    _safeLog('state', 'Dispose: case=${caseId ?? "none"} finalSaveAttempt=${caseId != null}');
-    _persistCurrentCase(force: true);
+    _safeLog('state', 'Dispose: case=${caseId ?? "none"} isDirty=$_isDirty');
     _controllers?.dispose();
     _controllers = null;
     super.dispose();
@@ -228,12 +221,8 @@ class FormStateProvider extends ChangeNotifier {
 
   void unloadCase() {
     final caseId = _currentCase?.id;
-    final hadPendingSave = _saveTimer != null;
-    _saveTimer?.cancel();
-    _saveTimer = null;
-    _savePendingLogged = false;
-    _persistCurrentCase(force: true);
-    _safeLog('state', 'unloadCase: case=${caseId ?? "none"} saveNowOccurred=$hadPendingSave');
+    _safeLog('state', 'unloadCase: case=${caseId ?? "none"} isDirty=$_isDirty');
+    _isDirty = false;
     _controllers?.dispose();
     _controllers = null;
     _formInstance = null;

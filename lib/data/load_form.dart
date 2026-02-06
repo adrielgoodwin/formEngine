@@ -188,7 +188,7 @@ Future<FormDefinition> loadFormDefinition() async {
         multiLine: true,
       ),
 
-      // ===== Block 3 — Other Professionals (Repeatable) =====
+      // ===== Block 3 — Professionals (Repeatable) =====
       'professional_profession': TextInputNode(
         id: 'professional_profession',
         label: 'Profession',
@@ -1134,7 +1134,7 @@ Future<FormDefinition> loadFormDefinition() async {
 
       FormBlock(
         id: 'block_other_professionals',
-        title: 'Other Professionals',
+        title: 'Professionals',
         borderStyle: BlockBorderStyle.leftHeavyAllLight,
         colorScheme: BlockColorScheme.professional,
         column: 2,
@@ -1143,7 +1143,7 @@ Future<FormDefinition> loadFormDefinition() async {
           children: [
             LayoutGroup(
               id: 'professionals_repeatable_group',
-              label: 'Professionals',
+              label: '',
               groupId: 'professional_group',
               children: const [],
             ),
