@@ -61,10 +61,20 @@ bool _hasAnyRenderableValue(
       return false;
 
     case LayoutGroup():
-      // If groupId is set and children are empty (repeatable groups), we don't
-      // have enough info at this layer to introspect the group's internal nodeIds.
-      // For inline groups (no groupId), recurse into children.
-      if (item.groupId != null && item.children.isEmpty) return false;
+      // If groupId is set, check the group definition's children (the layout
+      // item's children may be empty for nested RRN groups).
+      if (item.groupId != null) {
+        final groupDef = def.groups[item.groupId];
+        if (groupDef != null) {
+          final children = groupDef.children.isNotEmpty
+              ? groupDef.children
+              : item.children;
+          for (final child in children) {
+            if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
+          }
+        }
+        return false;
+      }
       for (final child in item.children) {
         if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
       }
@@ -745,6 +755,23 @@ pw.Widget _renderFieldRow(List<FieldEntry> entries) {
 }
 
 String? _formatValue(Object? value, FormNode node, DataSpec? dataSpec) {
+  // Single-checkbox choices (Requested/Received with ['Yes']) always
+  // return Yes/No even when value is null — keeps RRN rows intact.
+  if (node is ChoiceInputNode &&
+      node.choiceLabels.length == 1 &&
+      node.choiceLabels.first == 'Yes') {
+    if (value is List<bool> && value.isNotEmpty && value.first) return 'Yes';
+    return 'No';
+  }
+
+  // Yes/No binary choice — always show
+  if (node is ChoiceInputNode &&
+      node.choiceLabels.length == 2 &&
+      node.choiceLabels[0] == 'Yes' && node.choiceLabels[1] == 'No') {
+    if (value is List<bool> && value.isNotEmpty && value[0]) return 'Yes';
+    return 'No';
+  }
+
   if (value == null) return null;
 
   switch (node) {
@@ -754,17 +781,6 @@ String? _formatValue(Object? value, FormNode node, DataSpec? dataSpec) {
 
     case ChoiceInputNode():
       if (value is List<bool>) {
-        // Single-checkbox style (e.g. Requested/Received with ['Yes'])
-        // Always show Yes/No to keep RRN rows intact
-        if (node.choiceLabels.length == 1 && node.choiceLabels.first == 'Yes') {
-          return (value.isNotEmpty && value.first) ? 'Yes' : 'No';
-        }
-        // Yes/No binary choice — show as plain text
-        if (node.choiceLabels.length == 2 &&
-            node.choiceLabels[0] == 'Yes' && node.choiceLabels[1] == 'No') {
-          final yesSelected = value.isNotEmpty && value[0];
-          return yesSelected ? 'Yes' : 'No';
-        }
         final selected = <String>[];
         for (var i = 0; i < value.length && i < node.choiceLabels.length; i++) {
           if (value[i]) selected.add(node.choiceLabels[i]);
