@@ -224,13 +224,6 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
     elements.add(PdfSpacer(6));
   }
 
-  final remaining = _buildRemainingFieldEntries(def, instance, renderedNodeIds);
-  if (remaining.isNotEmpty) {
-    elements.add(PdfSectionHeader('Additional Fields', level: 1));
-    elements.addAll(_packFieldsIntoRows(remaining));
-    elements.add(PdfSpacer(12));
-  }
-
   return elements;
 }
 
@@ -546,43 +539,6 @@ FieldEntry? _createFieldEntryFromValue(
   );
 }
 
-List<FieldEntry> _buildRemainingFieldEntries(
-  FormDefinition def,
-  FormInstance instance,
-  Set<String> renderedNodeIds,
-) {
-  final entries = <FieldEntry>[];
-
-  void addIfPresent(String nodeId, Object? value) {
-    if (renderedNodeIds.contains(nodeId)) return;
-    final node = def.nodes[nodeId];
-    if (node == null) return;
-    final spec = def.dataSpecs[nodeId];
-    final displayValue = _formatValue(value, node, spec);
-    if (displayValue == null || displayValue.isEmpty) return;
-
-    renderedNodeIds.add(nodeId);
-    final preferFullWidth = _shouldPreferFullWidth(displayValue, 1.0, spec);
-    entries.add(
-      FieldEntry(
-        label: node.label,
-        value: displayValue,
-        weight: 1.0,
-        preferFullWidth: preferFullWidth,
-      ),
-    );
-  }
-
-  for (final nodeId in def.dataSpecs.keys) {
-    addIfPresent(nodeId, instance.values[nodeId]);
-  }
-
-  for (final entry in instance.values.entries) {
-    addIfPresent(entry.key, entry.value);
-  }
-
-  return entries;
-}
 
 bool _shouldPreferFullWidth(String value, double widthFraction, DataSpec? dataSpec) {
   // Full width if explicitly set to 1.0
