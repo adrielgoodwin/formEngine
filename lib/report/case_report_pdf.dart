@@ -206,14 +206,7 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
     // Skip blocks with empty titles (shouldn't happen, but defensive)
     if (block.title.isEmpty) continue;
     
-    // Convert Flutter Color to PDF Color
-    PdfColor? blockColor;
-    if (block.colorScheme != BlockColorScheme.none) {
-      final flutterColor = block.getPrimaryColor();
-      blockColor = PdfColor.fromInt(flutterColor.toARGB32());
-    }
-    
-    elements.add(PdfSectionHeader(block.title, level: 1, color: blockColor));
+    elements.add(PdfSectionHeader(block.title, level: 1));
     elements.addAll(_extractElementsFromLayout(
       [block.layout],
       def,
@@ -622,7 +615,7 @@ pw.Widget _renderPdfElement(PdfElement element) {
             style: pw.TextStyle(
               fontSize: 9,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColors.grey700,
+              color: PdfColors.black,
             ),
           ),
         );
