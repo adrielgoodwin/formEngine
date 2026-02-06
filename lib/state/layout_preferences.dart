@@ -141,7 +141,7 @@ extension LayoutModeExtension on LayoutMode {
 class LayoutPreferences extends ChangeNotifier {
   LayoutMode _layoutMode = LayoutMode.oneColumn;
   bool _showBackgroundColors = false;
-  SpacingDensity _spacingDensity = SpacingDensity.normal;
+  SpacingDensity _spacingDensity = SpacingDensity.spacious;
 
   /// Current layout mode (1, 2, or 3 columns)
   LayoutMode get layoutMode => _layoutMode;

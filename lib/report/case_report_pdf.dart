@@ -107,25 +107,40 @@ Future<Uint8List> buildCasePdf(CaseRecord record, FormDefinition def) async {
 
   final elements = _buildPdfElements(def, instance);
 
+  // Extract deceased name and DOD for header
+  final deceasedName = (instance.getValue<String>('deceased_name') ?? '').trim();
+  final rawDod = (instance.getValue<String>('deceased_dod') ?? '').trim();
+  final dodFormatted = _formatDateWithMonth(rawDod);
+
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.letter,
       margin: const pw.EdgeInsets.all(40),
       build: (context) => [
-        pw.Header(
-          level: 0,
-          child: pw.Text(
-            record.title,
-            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
-          ),
-        ),
-        pw.SizedBox(height: 4),
-        pw.Text(
-          'Generated: ${_formatDateTime(DateTime.now())}',
-          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+        // Primary header: Deceased name + DOD on same line
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Text(
+              deceasedName.isNotEmpty ? deceasedName : record.title,
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            ),
+            if (dodFormatted.isNotEmpty) ...[
+              pw.SizedBox(width: 12),
+              pw.Text(
+                'DOD: $dodFormatted',
+                style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
+              ),
+            ],
+            pw.Spacer(),
+            pw.Text(
+              'Generated ${_formatDateTime(DateTime.now())}',
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
+            ),
+          ],
         ),
         pw.Divider(thickness: 0.5),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 4),
         ...elements.map(_renderPdfElement),
       ],
     ),
@@ -209,6 +224,60 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
   return elements;
 }
 
+/// Headers to suppress in PDF output (rendered inline instead)
+const _suppressedHeaders = {'Partner Info', 'Professionals'};
+
+/// Group IDs where dividers go at TOP of each instance (including first)
+const _dividerAtTopGroups = {'trustee_group'};
+
+/// Renders a LayoutGroup that references a named group (with groupId).
+/// Handles both repeatable and non-repeatable (RRN) groups.
+List<PdfElement> _renderGroupWithId(
+  LayoutGroup item,
+  FormDefinition def,
+  FormInstance instance,
+  Set<String> renderedNodeIds,
+) {
+  final elements = <PdfElement>[];
+  final groupDef = def.groups[item.groupId];
+  if (groupDef == null) return elements;
+
+  if (groupDef.repeatable) {
+    final instances = instance.getGroupInstances(item.groupId!);
+    if (instances.isEmpty) return elements;
+
+    final showLabel = item.label.isNotEmpty &&
+        !_suppressedHeaders.contains(item.label);
+    if (showLabel) {
+      elements.add(PdfSectionHeader(item.label, level: 2));
+    }
+
+    final dividerAtTop = _dividerAtTopGroups.contains(item.groupId);
+    for (var i = 0; i < instances.length; i++) {
+      if (dividerAtTop) {
+        elements.add(PdfDivider());
+      } else if (i > 0) {
+        elements.add(PdfDivider());
+      }
+      elements.addAll(_extractGroupInstanceElements(
+        groupDef.children, def, instance, instances[i], renderedNodeIds,
+      ));
+    }
+  } else {
+    // Non-repeatable group (RRN-style)
+    final instances = instance.getGroupInstances(item.groupId!);
+    if (instances.isNotEmpty) {
+      if (item.label.isNotEmpty) {
+        elements.add(PdfSectionHeader(item.label, level: 2));
+      }
+      elements.addAll(_extractGroupInstanceElements(
+        groupDef.children, def, instance, instances.first, renderedNodeIds,
+      ));
+    }
+  }
+  return elements;
+}
+
 List<PdfElement> _extractElementsFromLayout(
   List<LayoutItem> items,
   FormDefinition def,
@@ -239,7 +308,6 @@ List<PdfElement> _extractElementsFromLayout(
         if (entry != null) fieldEntries.add(entry);
 
       case LayoutRow():
-        // Collect fields from row children, handling all child types
         for (final child in item.children) {
           if (child.visibilityCondition != null &&
               !child.visibilityCondition!.evaluate(scopeValues) &&
@@ -250,74 +318,23 @@ List<PdfElement> _extractElementsFromLayout(
             final entry = _createFieldEntry(child, def, scopeValues, renderedNodeIds);
             if (entry != null) fieldEntries.add(entry);
           } else if (child is LayoutColumn) {
-            // Recurse into nested columns
             flushFields();
             elements.addAll(_extractElementsFromLayout(
-              child.children,
-              def,
-              instance,
-              scopeValues,
-              renderedNodeIds,
+              child.children, def, instance, scopeValues, renderedNodeIds,
             ));
           } else if (child is LayoutGroup) {
-            // Handle inline groups (like Partner Info, Lawyer, Advisor)
             flushFields();
             if (child.groupId != null) {
-              final groupDef = def.groups[child.groupId];
-              if (groupDef != null && groupDef.repeatable) {
-                final instances = instance.getGroupInstances(child.groupId!);
-                if (instances.isNotEmpty) {
-                  // Add section header for repeatable groups
-                  if (child.label.isNotEmpty) {
-                    elements.add(PdfSectionHeader(
-                      child.label,
-                      level: 2,
-                    ));
-                  }
-                  for (var i = 0; i < instances.length; i++) {
-                    final groupInstance = instances[i];
-                    if (i > 0) elements.add(PdfDivider());
-                    elements.addAll(_extractGroupInstanceElements(
-                      groupDef.children,
-                      def,
-                      instance,
-                      groupInstance,
-                      renderedNodeIds,
-                    ));
-                  }
-                }
-              } else if (groupDef != null) {
-                final instances = instance.getGroupInstances(child.groupId!);
-                if (instances.isNotEmpty) {
-                  // Add the group's label as a section header for RRN groups
-                  if (child.label.isNotEmpty) {
-                    elements.add(PdfSectionHeader(
-                      child.label, 
-                      level: 2,
-                    ));
-                  }
-                  elements.addAll(_extractGroupInstanceElements(
-                    groupDef.children,
-                    def,
-                    instance,
-                    instances.first,
-                    renderedNodeIds,
-                  ));
-                }
-              }
+              elements.addAll(_renderGroupWithId(child, def, instance, renderedNodeIds));
             } else {
-              if (child.label.isNotEmpty) {
-                elements.add(PdfSectionHeader(
-                  child.label, 
-                  level: 2,
-                ));
+              // Inline group without groupId (e.g. conditional sections)
+              final showLabel = child.label.isNotEmpty &&
+                  !_suppressedHeaders.contains(child.label);
+              if (showLabel) {
+                elements.add(PdfSectionHeader(child.label, level: 2));
               }
               elements.addAll(_extractElementsFromLayout(
-                child.children,
-                def,
-                instance,
-                scopeValues,
-                renderedNodeIds,
+                child.children, def, instance, scopeValues, renderedNodeIds,
               ));
             }
           }
@@ -325,68 +342,22 @@ List<PdfElement> _extractElementsFromLayout(
 
       case LayoutColumn():
         elements.addAll(_extractElementsFromLayout(
-          item.children,
-          def,
-          instance,
-          scopeValues,
-          renderedNodeIds,
+          item.children, def, instance, scopeValues, renderedNodeIds,
         ));
 
       case LayoutGroup():
         flushFields();
         if (item.groupId != null) {
-          final groupDef = def.groups[item.groupId];
-          if (groupDef != null && groupDef.repeatable) {
-            final instances = instance.getGroupInstances(item.groupId!);
-            if (instances.isNotEmpty) {
-              // Add section header for repeatable groups (assets, executors, etc.)
-              if (item.label.isNotEmpty) {
-                elements.add(PdfSectionHeader(
-                  item.label,
-                  level: 2,
-                ));
-              }
-              for (var i = 0; i < instances.length; i++) {
-                final groupInstance = instances[i];
-                if (i > 0) elements.add(PdfDivider());
-                elements.addAll(_extractGroupInstanceElements(
-                  groupDef.children,
-                  def,
-                  instance,
-                  groupInstance,
-                  renderedNodeIds,
-                ));
-              }
-            }
-          } else if (groupDef != null) {
-            final instances = instance.getGroupInstances(item.groupId!);
-            if (instances.isNotEmpty) {
-              // Add the group's label as a section header for RRN groups
-              if (item.label.isNotEmpty) {
-                elements.add(PdfSectionHeader(
-                  item.label, 
-                  level: 2,
-                ));
-              }
-              elements.addAll(_extractGroupInstanceElements(
-                groupDef.children,
-                def,
-                instance,
-                instances.first,
-                renderedNodeIds,
-              ));
-            }
-          }
+          elements.addAll(_renderGroupWithId(item, def, instance, renderedNodeIds));
         } else {
-          if (item.label.isNotEmpty) {
+          // Inline group without groupId
+          final showLabel = item.label.isNotEmpty &&
+              !_suppressedHeaders.contains(item.label);
+          if (showLabel) {
             elements.add(PdfSectionHeader(item.label, level: 2));
           }
           elements.addAll(_extractElementsFromLayout(
-            item.children,
-            def,
-            instance,
-            scopeValues,
-            renderedNodeIds,
+            item.children, def, instance, scopeValues, renderedNodeIds,
           ));
         }
     }
@@ -441,53 +412,25 @@ List<PdfElement> _extractGroupInstanceElements(
           } else if (child is LayoutColumn) {
             flushFields();
             elements.addAll(_extractGroupInstanceElements(
-              child.children,
-              def,
-              instance,
-              groupInstance,
-              renderedNodeIds,
+              child.children, def, instance, groupInstance, renderedNodeIds,
             ));
           } else if (child is LayoutGroup) {
             flushFields();
-            if (child.label.isNotEmpty) {
-              elements.add(PdfSectionHeader(
-                child.label, 
-                level: 2,
-              ));
-            }
-            elements.addAll(_extractGroupInstanceElements(
-              child.children,
-              def,
-              instance,
-              groupInstance,
-              renderedNodeIds,
+            elements.addAll(_resolveGroupInInstance(
+              child, def, instance, groupInstance, renderedNodeIds,
             ));
           }
         }
 
       case LayoutColumn():
         elements.addAll(_extractGroupInstanceElements(
-          item.children,
-          def,
-          instance,
-          groupInstance,
-          renderedNodeIds,
+          item.children, def, instance, groupInstance, renderedNodeIds,
         ));
 
       case LayoutGroup():
         flushFields();
-        if (item.label.isNotEmpty) {
-          elements.add(PdfSectionHeader(
-            item.label, 
-            level: 2,
-          ));
-        }
-        elements.addAll(_extractGroupInstanceElements(
-          item.children,
-          def,
-          instance,
-          groupInstance,
-          renderedNodeIds,
+        elements.addAll(_resolveGroupInInstance(
+          item, def, instance, groupInstance, renderedNodeIds,
         ));
     }
   }
@@ -496,9 +439,61 @@ List<PdfElement> _extractGroupInstanceElements(
   return elements;
 }
 
+/// Handles a LayoutGroup encountered inside a group instance.
+/// If the group has a groupId, looks up the group definition and renders
+/// its children (fixing the bug where nested RRN content was empty).
+List<PdfElement> _resolveGroupInInstance(
+  LayoutGroup item,
+  FormDefinition def,
+  FormInstance instance,
+  GroupInstance parentGroupInstance,
+  Set<String> renderedNodeIds,
+) {
+  final elements = <PdfElement>[];
+
+  if (item.groupId != null) {
+    // Named sub-group (e.g. RRN under assets like rrsp_liquidation)
+    final groupDef = def.groups[item.groupId];
+    if (groupDef == null) return elements;
+
+    final instances = instance.getGroupInstances(item.groupId!);
+    if (instances.isNotEmpty) {
+      if (item.label.isNotEmpty) {
+        elements.add(PdfSectionHeader(item.label, level: 2));
+      }
+      // Use the group definition's children (not the empty layout children)
+      elements.addAll(_extractGroupInstanceElements(
+        groupDef.children, def, instance, instances.first, renderedNodeIds,
+      ));
+    }
+  } else {
+    // Inline group without groupId (conditional sections)
+    final showLabel = item.label.isNotEmpty &&
+        !_suppressedHeaders.contains(item.label);
+    if (showLabel) {
+      elements.add(PdfSectionHeader(item.label, level: 2));
+    }
+    elements.addAll(_extractGroupInstanceElements(
+      item.children, def, instance, parentGroupInstance, renderedNodeIds,
+    ));
+  }
+
+  return elements;
+}
+
 // =============================================================================
 // Field Entry Creation
 // =============================================================================
+
+/// Label overrides for PDF display
+String _pdfLabel(String originalLabel, String nodeId) {
+  // Rename date labels to abbreviated forms
+  if (originalLabel == 'Date of Birth') return 'DOB';
+  if (originalLabel == 'Date of Death') return 'DOD';
+  // Normalize verbose RRN notes labels to just "Notes"
+  if (nodeId.endsWith('_notes') && originalLabel.length > 20) return 'Notes';
+  return originalLabel;
+}
 
 FieldEntry? _createFieldEntry(
   LayoutNodeRef nodeRef,
@@ -530,8 +525,11 @@ FieldEntry? _createFieldEntryFromValue(
   // Determine if field prefers full width based on content length or type
   final preferFullWidth = _shouldPreferFullWidth(displayValue, nodeRef.widthFraction, dataSpec);
 
+  // Apply label overrides for PDF display
+  final label = _pdfLabel(node.label, nodeRef.nodeId);
+
   return FieldEntry(
-    label: node.label,
+    label: label,
     value: displayValue,
     weight: nodeRef.widthFraction,
     preferFullWidth: preferFullWidth,
@@ -637,29 +635,22 @@ pw.Widget _renderPdfElement(PdfElement element) {
   switch (element) {
     case PdfSectionHeader():
       if (element.level == 1) {
-        // Level 1: Colored background band for block headers
-        final textColor = element.color != null ? PdfColors.white : PdfColors.black;
-        
+        // Level 1: Colored text section header (no background box)
         return pw.Container(
-          margin: const pw.EdgeInsets.only(top: 6, bottom: 3),
-          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: pw.BoxDecoration(
-            color: element.color ?? PdfColors.grey300,
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-          ),
+          margin: const pw.EdgeInsets.only(top: 8, bottom: 2),
           child: pw.Text(
             element.title,
             style: pw.TextStyle(
               fontSize: 11,
               fontWeight: pw.FontWeight.bold,
-              color: textColor,
+              color: element.color ?? PdfColors.black,
             ),
           ),
         );
       } else {
         // Level 2: Subsection headers (groups, repeatable instances)
         return pw.Container(
-          margin: const pw.EdgeInsets.only(top: 4, bottom: 2),
+          margin: const pw.EdgeInsets.only(top: 3, bottom: 1),
           child: pw.Text(
             element.title,
             style: pw.TextStyle(
@@ -676,7 +667,7 @@ pw.Widget _renderPdfElement(PdfElement element) {
 
     case PdfDivider():
       return pw.Container(
-        margin: const pw.EdgeInsets.symmetric(vertical: 4),
+        margin: const pw.EdgeInsets.symmetric(vertical: 2),
         child: pw.Divider(thickness: 0.3, color: PdfColors.grey400),
       );
 
@@ -763,6 +754,17 @@ String? _formatValue(Object? value, FormNode node, DataSpec? dataSpec) {
 
     case ChoiceInputNode():
       if (value is List<bool>) {
+        // Single-checkbox style (e.g. Requested/Received with ['Yes'])
+        // Always show Yes/No to keep RRN rows intact
+        if (node.choiceLabels.length == 1 && node.choiceLabels.first == 'Yes') {
+          return (value.isNotEmpty && value.first) ? 'Yes' : 'No';
+        }
+        // Yes/No binary choice — show as plain text
+        if (node.choiceLabels.length == 2 &&
+            node.choiceLabels[0] == 'Yes' && node.choiceLabels[1] == 'No') {
+          final yesSelected = value.isNotEmpty && value[0];
+          return yesSelected ? 'Yes' : 'No';
+        }
         final selected = <String>[];
         for (var i = 0; i < value.length && i < node.choiceLabels.length; i++) {
           if (value[i]) selected.add(node.choiceLabels[i]);
@@ -790,7 +792,7 @@ String? _formatTextValue(Object? value, ValueProfile profile) {
       return value.toString();
 
     case ValueProfile.dateDdMmYyyy:
-      return value.toString();
+      return _formatDateWithMonth(value.toString());
 
     case ValueProfile.sinCanada:
       final digits = value.toString().replaceAll(RegExp(r'\D'), '');
@@ -831,6 +833,23 @@ String _formatDateTime(DateTime dt) {
   final hour = dt.hour.toString().padLeft(2, '0');
   final minute = dt.minute.toString().padLeft(2, '0');
   return '$day/$month/$year $hour:$minute';
+}
+
+const _monthNames = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+];
+
+/// Formats a dd/mm/yyyy string to dd/mon/yyyy (e.g. 14/feb/2024)
+String _formatDateWithMonth(String? raw) {
+  if (raw == null || raw.isEmpty) return '';
+  final parts = raw.replaceAll(RegExp(r'[^\d/]'), '').split('/');
+  if (parts.length != 3) return raw;
+  final day = parts[0];
+  final monthIndex = int.tryParse(parts[1]);
+  final year = parts[2];
+  if (monthIndex == null || monthIndex < 1 || monthIndex > 12) return raw;
+  return '$day/${_monthNames[monthIndex - 1]}/$year';
 }
 
 Future<void> previewCasePdf(CaseRecord record, FormDefinition def) async {

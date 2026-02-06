@@ -500,7 +500,7 @@ Widget _renderLayoutScoped(
         final addLabel = switch (layout.groupId) {
           'executor_other_info' => 'Add Executor',
           'professional_group' => 'Add Professional',
-          'trustee_group' => 'Add Trustee',
+          'trustee_group' => 'Add Trustee/Contact Person',
           'share_certificate_group' => 'Add Share Certificate',
           'realestate_group' => 'Add Real Estate',
           'asset_group' => 'Add Other Asset',
