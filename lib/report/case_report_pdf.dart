@@ -533,6 +533,8 @@ String _pdfLabel(String originalLabel, String nodeId) {
   if (nodeId.endsWith('_notes') && originalLabel.length > 20) return 'Notes';
   // Simplify real estate ownership/tax history label
   if (nodeId == 'realestate_ownership_tax_history') return 'Ownership/tax history';
+  // Replace en dash with regular hyphen to avoid rendering issues
+  if (originalLabel.contains('–')) return originalLabel.replaceAll('–', '-');
   return originalLabel;
 }
 
@@ -653,16 +655,18 @@ pw.Widget _renderPdfElement(PdfElement element) {
         );
       } else {
         // Level 2: Subsection headers (groups, repeatable instances)
-        // Documents block keeps bold black headers; others use lighter field-label style
+        // Documents and Assets blocks keep bold black headers; others use lighter field-label style
         final isDocuments = element.blockId == 'block_documents';
+        final isAssets = element.blockId == 'block_asset_details';
+        final isBoldBlock = isDocuments || isAssets;
         return pw.Container(
           margin: const pw.EdgeInsets.only(top: 3, bottom: 1),
           child: pw.Text(
             element.title,
             style: pw.TextStyle(
-              fontSize: isDocuments ? 9 : 8,
-              fontWeight: isDocuments ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isDocuments ? PdfColors.black : PdfColors.grey700,
+              fontSize: isBoldBlock ? 9 : 8,
+              fontWeight: isBoldBlock ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: isBoldBlock ? PdfColors.black : PdfColors.grey700,
             ),
           ),
         );
