@@ -124,6 +124,10 @@ Future<FormDefinition> loadFormDefinition() async {
         choiceLabels: ['In person', 'Telephone', 'Zoom'],
         choiceCardinality: ChoiceCardinality.single,
       ),
+      'meeting_date': TextInputNode(
+        id: 'meeting_date',
+        label: 'Date',
+      ),
       'meeting_attendees': ChoiceInputNode(
         id: 'meeting_attendees',
         label: 'Attendees',
@@ -168,7 +172,7 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'trustee_is_other_person': ChoiceInputNode(
         id: 'trustee_is_other_person',
-        label: 'Other person?',
+        label: 'Other Person',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
@@ -178,7 +182,7 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'trustee_is_trustee': ChoiceInputNode(
         id: 'trustee_is_trustee',
-        label: 'Trustee?',
+        label: 'Trustee',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
@@ -288,9 +292,14 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'rrsp_has_beneficiary': ChoiceInputNode(
         id: 'rrsp_has_beneficiary',
-        label: 'Named Beneficiary?',
+        label: 'Named Beneficiary',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
+      ),
+      'rrsp_beneficiary_notes': TextInputNode(
+        id: 'rrsp_beneficiary_notes',
+        label: 'Beneficiary Notes',
+        multiLine: true,
       ),
       'rrsp_liquidation_requested': ChoiceInputNode(
         id: 'rrsp_liquidation_requested',
@@ -392,7 +401,7 @@ Future<FormDefinition> loadFormDefinition() async {
 
       'realestate_is_principal': ChoiceInputNode(
         id: 'realestate_is_principal',
-        label: 'Principal Residence?',
+        label: 'Principal Residence',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
@@ -411,7 +420,7 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'realestate_principal_all_years': ChoiceInputNode(
         id: 'realestate_principal_all_years',
-        label: 'Principal residence for all years owned?',
+        label: 'Principal Residence For All Years Owned',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
@@ -468,7 +477,7 @@ Future<FormDefinition> loadFormDefinition() async {
       // ===== Block 6 — Tax History =====
       'tax_gph_client': ChoiceInputNode(
         id: 'tax_gph_client',
-        label: 'GPH Client?',
+        label: 'GPH Client',
         choiceLabels: ['Yes', 'No'],
         choiceCardinality: ChoiceCardinality.single,
       ),
@@ -742,12 +751,17 @@ Future<FormDefinition> loadFormDefinition() async {
               LayoutNodeRef(
                 id: 'rrsp_riff_value_at_death_ref',
                 nodeId: 'rrsp_value',
-                widthFraction: 0.6,
+                widthFraction: 0.35,
               ),
               LayoutNodeRef(
                 id: 'rrsp_riff_named_beneficiary_ref',
                 nodeId: 'rrsp_has_beneficiary',
-                widthFraction: 0.4,
+                widthFraction: 0.23,
+              ),
+              LayoutNodeRef(
+                id: 'rrsp_beneficiary_notes_ref',
+                nodeId: 'rrsp_beneficiary_notes',
+                widthFraction: 0.42,
               ),
             ],
           ),
@@ -1091,10 +1105,20 @@ Future<FormDefinition> loadFormDefinition() async {
         layout: LayoutColumn(
           id: 'trustee_root',
           children: [
-            LayoutNodeRef(
-              id: 'meeting_type_ref',
-              nodeId: 'meeting_type',
-              widthFraction: 1.0,
+            LayoutRow(
+              id: 'meeting_type_date_row',
+              children: [
+                LayoutNodeRef(
+                  id: 'meeting_type_ref',
+                  nodeId: 'meeting_type',
+                  widthFraction: 0.6,
+                ),
+                LayoutNodeRef(
+                  id: 'meeting_date_ref',
+                  nodeId: 'meeting_date',
+                  widthFraction: 0.4,
+                ),
+              ],
             ),
             LayoutRow(
               id: 'meeting_attendees_row',
@@ -1381,6 +1405,11 @@ Future<FormDefinition> loadFormDefinition() async {
         valueKind: ValueKind.stringList,
         profile: ValueProfile.plainText,
       ),
+      'meeting_date': DataSpec(
+        formNodeID: 'meeting_date',
+        valueKind: ValueKind.string,
+        profile: ValueProfile.dateDdMmYyyy,
+      ),
       'meeting_attendees': DataSpec(
         formNodeID: 'meeting_attendees',
         valueKind: ValueKind.stringList,
@@ -1527,6 +1556,11 @@ Future<FormDefinition> loadFormDefinition() async {
       'rrsp_has_beneficiary': DataSpec(
         formNodeID: 'rrsp_has_beneficiary',
         valueKind: ValueKind.stringList,
+        profile: ValueProfile.plainText,
+      ),
+      'rrsp_beneficiary_notes': DataSpec(
+        formNodeID: 'rrsp_beneficiary_notes',
+        valueKind: ValueKind.string,
         profile: ValueProfile.plainText,
       ),
       'rrsp_liquidation_requested': DataSpec(

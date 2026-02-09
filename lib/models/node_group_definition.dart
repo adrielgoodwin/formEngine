@@ -35,9 +35,9 @@ class NodeGroupDefinition {
         LayoutRow(
           id: '${id}_row',
           children: [
-            LayoutNodeRef(id: '${id}_req_ref', nodeId: requestedId, widthFraction: 0.2),
-            LayoutNodeRef(id: '${id}_rcv_ref', nodeId: receivedId, widthFraction: 0.2),
-            LayoutNodeRef(id: '${id}_notes_ref', nodeId: notesId, widthFraction: 0.6),
+            LayoutNodeRef(id: '${id}_req_ref', nodeId: requestedId, widthFraction: 0.25),
+            LayoutNodeRef(id: '${id}_rcv_ref', nodeId: receivedId, widthFraction: 0.25),
+            LayoutNodeRef(id: '${id}_notes_ref', nodeId: notesId, widthFraction: 0.5),
           ],
         ),
       ],

@@ -167,7 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const EstateIntakeIcon(width: 240, height: 240),
             const SizedBox(width: 12),
-            const Text('Deceased Estate Intake'),
+            const Text('Estate Intake'),
           ],
         ),
         actions: [
@@ -222,7 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                   icon: const Icon(Icons.add),
                   label: const Text(
-                    'New Case',
+                    'New File',
                     style: TextStyle(color: Colors.black),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -535,6 +535,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
 
       await previewCasePdf(caseRecord, def);
+    } on PdfAlreadyOpenException catch (e) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('PDF Already Open'),
+          content: Text(e.message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     } catch (e, st) {
       AppLogger.instance.error(
         'report',

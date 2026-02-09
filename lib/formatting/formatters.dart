@@ -59,12 +59,32 @@ class MoneyCentsFormatter extends TextInputFormatter {
       return const TextEditingValue(text: '');
     }
 
-    final cents = int.tryParse(digits) ?? 0;
+    // Parse the input differently based on whether user typed a decimal
+    final hasUserEnteredDecimal = text.contains('.');
+    int cents;
+    
+    if (hasUserEnteredDecimal) {
+      // User typed decimal - treat as cents (original behavior)
+      cents = int.tryParse(digits) ?? 0;
+    } else {
+      // User didn't type decimal - treat as dollars
+      final dollars = int.tryParse(digits) ?? 0;
+      cents = dollars * 100;
+    }
+    
     final dollars = cents ~/ 100;
-    final centPart = (cents % 100).toString().padLeft(2, '0');
-
+    final centPart = cents % 100;
     final dollarsStr = _groupThousands(dollars.toString());
-    final formattedText = isNegative ? '-$dollarsStr.$centPart' : '$dollarsStr.$centPart';
+    
+    // Only show decimal if user has entered cents or explicitly typed a decimal point
+    final showDecimal = hasUserEnteredDecimal && centPart > 0;
+    
+    String formattedText;
+    if (showDecimal) {
+      formattedText = isNegative ? '-$dollarsStr.${centPart.toString().padLeft(2, '0')}' : '$dollarsStr.${centPart.toString().padLeft(2, '0')}';
+    } else {
+      formattedText = isNegative ? '-$dollarsStr' : dollarsStr;
+    }
 
     return TextEditingValue(
       text: formattedText,

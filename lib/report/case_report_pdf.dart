@@ -17,6 +17,23 @@ import '../models/layout_item.dart';
 import '../logging/app_logger.dart';
 
 // =============================================================================
+// PDF Exceptions
+// =============================================================================
+
+/// Exception thrown when a PDF file cannot be created because it's already open
+class PdfAlreadyOpenException implements Exception {
+  final String message;
+  final String? filePath;
+
+  PdfAlreadyOpenException(this.message, [this.filePath]);
+
+  @override
+  String toString() => filePath != null
+      ? 'PdfAlreadyOpenException: $message (file: $filePath)'
+      : 'PdfAlreadyOpenException: $message';
+}
+
+// =============================================================================
 // FieldEntry: Represents a single field for PDF layout
 // =============================================================================
 
@@ -92,8 +109,11 @@ class PdfSectionHeader extends PdfElement {
   final String title;
   final int level; // 1 = block, 2 = group/subsection
   final PdfColor? color; // Optional color for block headers
-  PdfSectionHeader(this.title, {this.level = 1, this.color});
+  final String? blockId; // Which block this header belongs to
+  PdfSectionHeader(this.title, {this.level = 1, this.color, this.blockId});
 }
+
+class PdfBlockDivider extends PdfElement {}
 
 class PdfFieldRow extends PdfElement {
   final List<FieldEntry> entries;
@@ -202,9 +222,15 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
   // 1. Deceased, 2. Trustees, 3. Professionals, 4. Documents, 5. Tax History, 6. Assets
   final orderedBlocks = _orderBlocksForPdf(def.blocks);
 
-  for (final block in orderedBlocks) {
+  for (var i = 0; i < orderedBlocks.length; i++) {
+    final block = orderedBlocks[i];
     // Skip blocks with empty titles (shouldn't happen, but defensive)
     if (block.title.isEmpty) continue;
+
+    // Add dark divider between blocks (not before the first one)
+    if (i > 0) {
+      elements.add(PdfBlockDivider());
+    }
     
     elements.add(PdfSectionHeader(block.title, level: 1));
     elements.addAll(_extractElementsFromLayout(
@@ -213,6 +239,7 @@ List<PdfElement> _buildPdfElements(FormDefinition def, FormInstance instance) {
       instance,
       instance.values,
       renderedNodeIds,
+      blockId: block.id,
     ));
     elements.add(PdfSpacer(6));
   }
@@ -232,8 +259,9 @@ List<PdfElement> _renderGroupWithId(
   LayoutGroup item,
   FormDefinition def,
   FormInstance instance,
-  Set<String> renderedNodeIds,
-) {
+  Set<String> renderedNodeIds, {
+  String? blockId,
+}) {
   final elements = <PdfElement>[];
   final groupDef = def.groups[item.groupId];
   if (groupDef == null) return elements;
@@ -245,7 +273,7 @@ List<PdfElement> _renderGroupWithId(
     final showLabel = item.label.isNotEmpty &&
         !_suppressedHeaders.contains(item.label);
     if (showLabel) {
-      elements.add(PdfSectionHeader(item.label, level: 2));
+      elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
     }
 
     final dividerAtTop = _dividerAtTopGroups.contains(item.groupId);
@@ -257,6 +285,7 @@ List<PdfElement> _renderGroupWithId(
       }
       elements.addAll(_extractGroupInstanceElements(
         groupDef.children, def, instance, instances[i], renderedNodeIds,
+        blockId: blockId,
       ));
     }
   } else {
@@ -264,10 +293,11 @@ List<PdfElement> _renderGroupWithId(
     final instances = instance.getGroupInstances(item.groupId!);
     if (instances.isNotEmpty) {
       if (item.label.isNotEmpty) {
-        elements.add(PdfSectionHeader(item.label, level: 2));
+        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
       }
       elements.addAll(_extractGroupInstanceElements(
         groupDef.children, def, instance, instances.first, renderedNodeIds,
+        blockId: blockId,
       ));
     }
   }
@@ -279,8 +309,9 @@ List<PdfElement> _extractElementsFromLayout(
   FormDefinition def,
   FormInstance instance,
   Map<String, Object?> scopeValues,
-  Set<String> renderedNodeIds,
-) {
+  Set<String> renderedNodeIds, {
+  String? blockId,
+}) {
   final fieldEntries = <FieldEntry>[];
   final elements = <PdfElement>[];
 
@@ -317,20 +348,22 @@ List<PdfElement> _extractElementsFromLayout(
             flushFields();
             elements.addAll(_extractElementsFromLayout(
               child.children, def, instance, scopeValues, renderedNodeIds,
+              blockId: blockId,
             ));
           } else if (child is LayoutGroup) {
             flushFields();
             if (child.groupId != null) {
-              elements.addAll(_renderGroupWithId(child, def, instance, renderedNodeIds));
+              elements.addAll(_renderGroupWithId(child, def, instance, renderedNodeIds, blockId: blockId));
             } else {
               // Inline group without groupId (e.g. conditional sections)
               final showLabel = child.label.isNotEmpty &&
                   !_suppressedHeaders.contains(child.label);
               if (showLabel) {
-                elements.add(PdfSectionHeader(child.label, level: 2));
+                elements.add(PdfSectionHeader(child.label, level: 2, blockId: blockId));
               }
               elements.addAll(_extractElementsFromLayout(
                 child.children, def, instance, scopeValues, renderedNodeIds,
+                blockId: blockId,
               ));
             }
           }
@@ -339,21 +372,23 @@ List<PdfElement> _extractElementsFromLayout(
       case LayoutColumn():
         elements.addAll(_extractElementsFromLayout(
           item.children, def, instance, scopeValues, renderedNodeIds,
+          blockId: blockId,
         ));
 
       case LayoutGroup():
         flushFields();
         if (item.groupId != null) {
-          elements.addAll(_renderGroupWithId(item, def, instance, renderedNodeIds));
+          elements.addAll(_renderGroupWithId(item, def, instance, renderedNodeIds, blockId: blockId));
         } else {
           // Inline group without groupId
           final showLabel = item.label.isNotEmpty &&
               !_suppressedHeaders.contains(item.label);
           if (showLabel) {
-            elements.add(PdfSectionHeader(item.label, level: 2));
+            elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
           }
           elements.addAll(_extractElementsFromLayout(
             item.children, def, instance, scopeValues, renderedNodeIds,
+            blockId: blockId,
           ));
         }
     }
@@ -368,8 +403,9 @@ List<PdfElement> _extractGroupInstanceElements(
   FormDefinition def,
   FormInstance instance,
   GroupInstance groupInstance,
-  Set<String> renderedNodeIds,
-) {
+  Set<String> renderedNodeIds, {
+  String? blockId,
+}) {
   final scopeValues = {...instance.values, ...groupInstance.values};
   final fieldEntries = <FieldEntry>[];
   final elements = <PdfElement>[];
@@ -409,11 +445,13 @@ List<PdfElement> _extractGroupInstanceElements(
             flushFields();
             elements.addAll(_extractGroupInstanceElements(
               child.children, def, instance, groupInstance, renderedNodeIds,
+              blockId: blockId,
             ));
           } else if (child is LayoutGroup) {
             flushFields();
             elements.addAll(_resolveGroupInInstance(
               child, def, instance, groupInstance, renderedNodeIds,
+              blockId: blockId,
             ));
           }
         }
@@ -421,12 +459,14 @@ List<PdfElement> _extractGroupInstanceElements(
       case LayoutColumn():
         elements.addAll(_extractGroupInstanceElements(
           item.children, def, instance, groupInstance, renderedNodeIds,
+          blockId: blockId,
         ));
 
       case LayoutGroup():
         flushFields();
         elements.addAll(_resolveGroupInInstance(
           item, def, instance, groupInstance, renderedNodeIds,
+          blockId: blockId,
         ));
     }
   }
@@ -443,8 +483,9 @@ List<PdfElement> _resolveGroupInInstance(
   FormDefinition def,
   FormInstance instance,
   GroupInstance parentGroupInstance,
-  Set<String> renderedNodeIds,
-) {
+  Set<String> renderedNodeIds, {
+  String? blockId,
+}) {
   final elements = <PdfElement>[];
 
   if (item.groupId != null) {
@@ -455,11 +496,12 @@ List<PdfElement> _resolveGroupInInstance(
     final instances = instance.getGroupInstances(item.groupId!);
     if (instances.isNotEmpty) {
       if (item.label.isNotEmpty) {
-        elements.add(PdfSectionHeader(item.label, level: 2));
+        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
       }
       // Use the group definition's children (not the empty layout children)
       elements.addAll(_extractGroupInstanceElements(
         groupDef.children, def, instance, instances.first, renderedNodeIds,
+        blockId: blockId,
       ));
     }
   } else {
@@ -467,10 +509,11 @@ List<PdfElement> _resolveGroupInInstance(
     final showLabel = item.label.isNotEmpty &&
         !_suppressedHeaders.contains(item.label);
     if (showLabel) {
-      elements.add(PdfSectionHeader(item.label, level: 2));
+      elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
     }
     elements.addAll(_extractGroupInstanceElements(
       item.children, def, instance, parentGroupInstance, renderedNodeIds,
+      blockId: blockId,
     ));
   }
 
@@ -488,6 +531,8 @@ String _pdfLabel(String originalLabel, String nodeId) {
   if (originalLabel == 'Date of Death') return 'DOD';
   // Normalize verbose RRN notes labels to just "Notes"
   if (nodeId.endsWith('_notes') && originalLabel.length > 20) return 'Notes';
+  // Simplify real estate ownership/tax history label
+  if (nodeId == 'realestate_ownership_tax_history') return 'Ownership/tax history';
   return originalLabel;
 }
 
@@ -608,14 +653,16 @@ pw.Widget _renderPdfElement(PdfElement element) {
         );
       } else {
         // Level 2: Subsection headers (groups, repeatable instances)
+        // Documents block keeps bold black headers; others use lighter field-label style
+        final isDocuments = element.blockId == 'block_documents';
         return pw.Container(
           margin: const pw.EdgeInsets.only(top: 3, bottom: 1),
           child: pw.Text(
             element.title,
             style: pw.TextStyle(
-              fontSize: 9,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.black,
+              fontSize: isDocuments ? 9 : 8,
+              fontWeight: isDocuments ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: isDocuments ? PdfColors.black : PdfColors.grey700,
             ),
           ),
         );
@@ -628,6 +675,12 @@ pw.Widget _renderPdfElement(PdfElement element) {
       return pw.Container(
         margin: const pw.EdgeInsets.symmetric(vertical: 2),
         child: pw.Divider(thickness: 0.3, color: PdfColors.grey400),
+      );
+
+    case PdfBlockDivider():
+      return pw.Container(
+        margin: const pw.EdgeInsets.only(top: 6, bottom: 2),
+        child: pw.Divider(thickness: 0.5, color: PdfColors.black),
       );
 
     case PdfSpacer():
@@ -751,8 +804,15 @@ String? _formatTextValue(Object? value, ValueProfile profile) {
         final dollars = absValue ~/ 100;
         final cents = absValue % 100;
         final sign = isNegative ? '-' : '';
-        final formatted = '$sign\$${_formatWithCommas(dollars)}.${cents.toString().padLeft(2, '0')}';
-        return formatted;
+        
+        // Only show decimal if there are actual cents
+        if (cents > 0) {
+          final formatted = '$sign\$${_formatWithCommas(dollars)}.${cents.toString().padLeft(2, '0')}';
+          return formatted;
+        } else {
+          final formatted = '$sign\$${_formatWithCommas(dollars)}';
+          return formatted;
+        }
       }
       return value.toString();
 
@@ -846,9 +906,17 @@ Future<String> createCasePdfFileForWindows(CaseRecord record, FormDefinition def
   final filePath = p.join(reportsDir.path, filename);
 
   final file = File(filePath);
-  await file.writeAsBytes(bytes, flush: true);
-  logger.info('report', 'PDF generated: case=${record.id} path=$filePath');
-  return filePath;
+  try {
+    await file.writeAsBytes(bytes, flush: true);
+    logger.info('report', 'PDF generated: case=${record.id} path=$filePath');
+    return filePath;
+  } catch (e) {
+    // Check if this is likely a file lock issue (PDF already open)
+    if (e.toString().contains('lock') || e.toString().contains('used by another process')) {
+      throw PdfAlreadyOpenException('PDF already open, close before making a new one', filePath);
+    }
+    rethrow;
+  }
 }
 
 Future<bool> openPdfFileOnWindows(String filePath) async {
@@ -885,7 +953,7 @@ Future<bool> openPdfFolderOnWindows(String filePath) async {
 String _buildReportFilename(String deceasedName, String dod, String caseId) {
   final namePart = deceasedName.isEmpty ? 'Unknown' : deceasedName;
   final dodPart = dod.isEmpty ? 'UnknownDoD' : dod;
-  return '$namePart - $dodPart - $caseId.pdf';
+  return 'Estate Intake - $namePart - $dodPart.pdf';
 }
 
 String _safeFilename(String input) {

@@ -9,6 +9,13 @@ import '../models/form_definition.dart';
 import '../models/form_instance.dart';
 import '../models/assembler.dart';
 import '../models/form_definition_validation.dart';
+import '../models/layout_item.dart';
+
+class _GroupContext {
+  final String groupId;
+  final String instanceId;
+  const _GroupContext(this.groupId, this.instanceId);
+}
 
 class FormStateProvider extends ChangeNotifier {
   final CaseRepository _repository;
@@ -106,6 +113,109 @@ class FormStateProvider extends ChangeNotifier {
     }
   }
 
+  /// Cleans up data from sections that are conditionally hidden.
+  /// Walks the layout tree, evaluates each VisibilityCondition, and deletes
+  /// data for any nodes inside sections whose condition is currently false.
+  void _cleanupConditionalData() {
+    final def = _formDefinition;
+    final instance = _formInstance;
+    if (def == null || instance == null) return;
+
+    final deletedNodes = <String>[];
+
+    for (final block in def.blocks) {
+      _walkAndCleanup(
+        [block.layout], def, instance, instance.values, null, deletedNodes,
+      );
+    }
+
+    if (deletedNodes.isNotEmpty) {
+      _safeLog('state', 'Cleaned up ${deletedNodes.length} values from hidden conditionals: ${deletedNodes.join(', ')}');
+    }
+  }
+
+  /// Recursively walks layout items. When a visibility condition evaluates
+  /// to false, all descendant node data is deleted. Otherwise recurses deeper.
+  void _walkAndCleanup(
+    List<LayoutItem> items,
+    FormDefinition def,
+    FormInstance instance,
+    Map<String, Object?> scope,
+    _GroupContext? groupCtx,
+    List<String> deletedNodes,
+  ) {
+    for (final item in items) {
+      if (item.visibilityCondition != null &&
+          !item.visibilityCondition!.evaluate(scope)) {
+        // Hidden section — collect all descendant nodeIds and delete their data
+        final nodeIds = <String>{};
+        _collectAllNodeIds(item, def, nodeIds);
+        for (final nodeId in nodeIds) {
+          if (groupCtx != null) {
+            final gi = instance.getGroupInstances(groupCtx.groupId)
+                .where((g) => g.instanceId == groupCtx.instanceId)
+                .firstOrNull;
+            if (gi != null && gi.values.containsKey(nodeId)) {
+              gi.values.remove(nodeId);
+              deletedNodes.add('$nodeId(${groupCtx.groupId}/${groupCtx.instanceId})');
+            }
+          } else {
+            if (instance.values.containsKey(nodeId)) {
+              instance.values.remove(nodeId);
+              deletedNodes.add(nodeId);
+            }
+          }
+        }
+        continue;
+      }
+
+      // Visible — recurse into children
+      switch (item) {
+        case LayoutNodeRef():
+          break;
+        case LayoutRow():
+          _walkAndCleanup(item.children, def, instance, scope, groupCtx, deletedNodes);
+        case LayoutColumn():
+          _walkAndCleanup(item.children, def, instance, scope, groupCtx, deletedNodes);
+        case LayoutGroup():
+          if (item.groupId != null) {
+            final groupDef = def.groups[item.groupId];
+            if (groupDef != null) {
+              for (final gi in instance.getGroupInstances(item.groupId!)) {
+                final mergedScope = {...scope, ...gi.values};
+                final ctx = _GroupContext(item.groupId!, gi.instanceId);
+                _walkAndCleanup(
+                  groupDef.children, def, instance, mergedScope, ctx, deletedNodes,
+                );
+              }
+            }
+          } else {
+            _walkAndCleanup(item.children, def, instance, scope, groupCtx, deletedNodes);
+          }
+      }
+    }
+  }
+
+  /// Recursively collects every nodeId reachable from [item].
+  void _collectAllNodeIds(LayoutItem item, FormDefinition def, Set<String> out) {
+    switch (item) {
+      case LayoutNodeRef():
+        out.add(item.nodeId);
+      case LayoutRow():
+        for (final c in item.children) _collectAllNodeIds(c, def, out);
+      case LayoutColumn():
+        for (final c in item.children) _collectAllNodeIds(c, def, out);
+      case LayoutGroup():
+        for (final c in item.children) _collectAllNodeIds(c, def, out);
+        if (item.groupId != null) {
+          final groupDef = def.groups[item.groupId];
+          if (groupDef != null) {
+            for (final c in groupDef.children) _collectAllNodeIds(c, def, out);
+          }
+        }
+    }
+  }
+
   /// Explicitly saves the current case to the repository.
   /// Returns true on success, false on failure.
   bool saveNow() {
@@ -114,6 +224,9 @@ class FormStateProvider extends ChangeNotifier {
 
     // Derive title from deceased_name before saving
     _updateCaseTitleFromInstance();
+
+    // Clean up data from conditionally hidden sections
+    _cleanupConditionalData();
 
     _safeLog('state', 'Explicit save for case ${caseToSave.id}');
     try {

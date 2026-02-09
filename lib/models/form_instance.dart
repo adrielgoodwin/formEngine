@@ -105,15 +105,29 @@ class FormInstance {
       };
 
   factory FormInstance.fromJson(Map<String, dynamic> json) {
+    final groups = (json['groupInstances'] as Map<String, dynamic>).map(
+      (key, value) => MapEntry(
+        key,
+        (value as List).map((e) => GroupInstance.fromJson(e as Map<String, dynamic>)).toList(),
+      ),
+    );
+
+    // Rebuild counters from existing instance IDs so new instances
+    // never collide with deserialized ones.
+    final counters = <String, int>{};
+    for (final entry in groups.entries) {
+      int max = 0;
+      for (final gi in entry.value) {
+        final parsed = int.tryParse(gi.instanceId) ?? 0;
+        if (parsed > max) max = parsed;
+      }
+      counters[entry.key] = max;
+    }
+
     return FormInstance._(
       _coerceValuesMap(json['values'] as Map),
-      (json['groupInstances'] as Map<String, dynamic>).map(
-        (key, value) => MapEntry(
-          key,
-          (value as List).map((e) => GroupInstance.fromJson(e as Map<String, dynamic>)).toList(),
-        ),
-      ),
-      {},
+      groups,
+      counters,
     );
   }
 
