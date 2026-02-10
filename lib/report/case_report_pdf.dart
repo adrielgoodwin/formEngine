@@ -447,15 +447,26 @@ List<PdfElement> _resolveGroupInInstance(
     final groupDef = def.groups[item.groupId];
     if (groupDef == null) return elements;
 
-    final instances = instance.getGroupInstances(item.groupId!);
-    if (instances.isNotEmpty) {
-      if (item.label.isNotEmpty) {
-        final isRrn = !groupDef.repeatable;
-        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId, isRrn: isRrn));
-      }
+    if (item.label.isNotEmpty) {
+      final isRrn = !groupDef.repeatable;
+      elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId, isRrn: isRrn));
+    }
+
+    if (groupDef.repeatable) {
+      final instances = instance.getGroupInstances(item.groupId!);
+      if (instances.isEmpty) return elements;
+
       // Use the group definition's children (not the empty layout children)
       elements.addAll(_extractGroupInstanceElements(
         groupDef.children, def, instance, instances.first, renderedNodeIds,
+        blockId: blockId,
+      ));
+    } else {
+      // Nested non-repeatable groups (RRNs) in the UI store their node values in
+      // the *parent* group instance values map (not in a separate group instance).
+      // Render using the parent scope so the PDF reflects the saved data.
+      elements.addAll(_extractGroupInstanceElements(
+        groupDef.children, def, instance, parentGroupInstance, renderedNodeIds,
         blockId: blockId,
       ));
     }
