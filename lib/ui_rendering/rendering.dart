@@ -942,24 +942,16 @@ Widget renderTextInput(
     },
   );
 
-  // Wrap with KeyboardListener for Alt+Enter support in multi-line fields
+  // Wrap with CallbackShortcuts for Alt+Enter support in multi-line fields
   // Use a simple debounce to prevent multiple insertions
   bool isProcessing = false;
   
   Widget textField = node.multiLine 
-    ? KeyboardListener(
-        focusNode: FocusNode(),
-        onKeyEvent: (KeyEvent event) {
-          // Only handle key down events
-          if (event is KeyDownEvent && !isProcessing) {
-            // Use platform-agnostic modifier detection
-            final isModifierPressed = (
-              HardwareKeyboard.instance.isAltPressed || 
-              HardwareKeyboard.instance.isMetaPressed || // Mac Cmd key
-              HardwareKeyboard.instance.isControlPressed
-            );
-            
-            if (isModifierPressed && event.logicalKey == LogicalKeyboardKey.enter) {
+    ? CallbackShortcuts(
+        bindings: {
+          // Handle Alt+Enter, Cmd+Enter, and Ctrl+Enter
+          const SingleActivator(LogicalKeyboardKey.enter, alt: true): () {
+            if (!isProcessing) {
               isProcessing = true;
               // Insert a newline at the current cursor position
               final cursorPos = controller.selection.base.offset;
@@ -974,7 +966,41 @@ Widget renderTextInput(
                 isProcessing = false;
               });
             }
-          }
+          },
+          const SingleActivator(LogicalKeyboardKey.enter, meta: true): () {
+            if (!isProcessing) {
+              isProcessing = true;
+              // Insert a newline at the current cursor position
+              final cursorPos = controller.selection.base.offset;
+              final text = controller.text;
+              final newText = '${text.substring(0, cursorPos)}\n${text.substring(cursorPos)}';
+              controller.value = TextEditingValue(
+                text: newText,
+                selection: TextSelection.collapsed(offset: cursorPos + 1),
+              );
+              // Reset processing flag after a short delay
+              Future.delayed(const Duration(milliseconds: 100), () {
+                isProcessing = false;
+              });
+            }
+          },
+          const SingleActivator(LogicalKeyboardKey.enter, control: true): () {
+            if (!isProcessing) {
+              isProcessing = true;
+              // Insert a newline at the current cursor position
+              final cursorPos = controller.selection.base.offset;
+              final text = controller.text;
+              final newText = '${text.substring(0, cursorPos)}\n${text.substring(cursorPos)}';
+              controller.value = TextEditingValue(
+                text: newText,
+                selection: TextSelection.collapsed(offset: cursorPos + 1),
+              );
+              // Reset processing flag after a short delay
+              Future.delayed(const Duration(milliseconds: 100), () {
+                isProcessing = false;
+              });
+            }
+          },
         },
         child: textFieldBase,
       )
