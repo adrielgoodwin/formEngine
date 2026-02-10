@@ -533,8 +533,8 @@ String _pdfLabel(String originalLabel, String nodeId) {
   if (nodeId.endsWith('_notes') && originalLabel.length > 20) return 'Notes';
   // Simplify real estate ownership/tax history label
   if (nodeId == 'realestate_ownership_tax_history') return 'Ownership/tax history';
-  // Replace en dash with regular hyphen to avoid rendering issues
-  if (originalLabel.contains('–')) return originalLabel.replaceAll('–', '-');
+  // Remove hyphen from Tax returns label to fix icon issue
+  if (nodeId == 'tax_returns_rrn') return 'Tax returns previous 2 years';
   return originalLabel;
 }
 
@@ -655,10 +655,12 @@ pw.Widget _renderPdfElement(PdfElement element) {
         );
       } else {
         // Level 2: Subsection headers (groups, repeatable instances)
-        // Documents and Assets blocks keep bold black headers; others use lighter field-label style
+        // Documents block keeps bold black headers; Assets block keeps bold black headers EXCEPT for RRNs
         final isDocuments = element.blockId == 'block_documents';
         final isAssets = element.blockId == 'block_asset_details';
-        final isBoldBlock = isDocuments || isAssets;
+        final isRrn = element.title.toLowerCase().contains('rrn') || 
+                     element.title.toLowerCase().contains('requested/received');
+        final isBoldBlock = isDocuments || (isAssets && !isRrn);
         return pw.Container(
           margin: const pw.EdgeInsets.only(top: 3, bottom: 1),
           child: pw.Text(
