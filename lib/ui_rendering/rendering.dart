@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/form_controllers.dart';
@@ -885,7 +886,7 @@ Widget renderTextInput(
     }
   }
 
-  final textField = TextField(
+  final textFieldBase = TextField(
     controller: controller,
     maxLines: node.multiLine ? null : 1,
     keyboardType: formatting.keyboardType(),
@@ -940,6 +941,44 @@ Widget renderTextInput(
       }
     },
   );
+
+  // Wrap with KeyboardListener for Alt+Enter support in multi-line fields
+  // Use a simple debounce to prevent multiple insertions
+  bool isProcessing = false;
+  
+  Widget textField = node.multiLine 
+    ? KeyboardListener(
+        focusNode: FocusNode(),
+        onKeyEvent: (KeyEvent event) {
+          // Only handle key down events
+          if (event is KeyDownEvent && !isProcessing) {
+            // Use platform-agnostic modifier detection
+            final isModifierPressed = (
+              HardwareKeyboard.instance.isAltPressed || 
+              HardwareKeyboard.instance.isMetaPressed || // Mac Cmd key
+              HardwareKeyboard.instance.isControlPressed
+            );
+            
+            if (isModifierPressed && event.logicalKey == LogicalKeyboardKey.enter) {
+              isProcessing = true;
+              // Insert a newline at the current cursor position
+              final cursorPos = controller.selection.base.offset;
+              final text = controller.text;
+              final newText = '${text.substring(0, cursorPos)}\n${text.substring(cursorPos)}';
+              controller.value = TextEditingValue(
+                text: newText,
+                selection: TextSelection.collapsed(offset: cursorPos + 1),
+              );
+              // Reset processing flag after a short delay
+              Future.delayed(const Duration(milliseconds: 100), () {
+                isProcessing = false;
+              });
+            }
+          }
+        },
+        child: textFieldBase,
+      )
+    : textFieldBase;
 
   Widget input = Column(
     crossAxisAlignment: CrossAxisAlignment.start,
