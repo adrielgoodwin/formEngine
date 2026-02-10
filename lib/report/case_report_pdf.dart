@@ -51,53 +51,6 @@ class FieldEntry {
   });
 }
 
-bool _hasAnyRenderableValue(
-  LayoutItem item,
-  FormDefinition def,
-  Map<String, Object?> scopeValues,
-) {
-  switch (item) {
-    case LayoutNodeRef():
-      final node = def.nodes[item.nodeId];
-      if (node == null) return false;
-      final value = scopeValues[item.nodeId];
-      final spec = def.dataSpecs[item.nodeId];
-      final displayValue = _formatValue(value, node, spec);
-      return displayValue != null && displayValue.isNotEmpty;
-
-    case LayoutRow():
-      for (final child in item.children) {
-        if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
-      }
-      return false;
-
-    case LayoutColumn():
-      for (final child in item.children) {
-        if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
-      }
-      return false;
-
-    case LayoutGroup():
-      // If groupId is set, check the group definition's children (the layout
-      // item's children may be empty for nested RRN groups).
-      if (item.groupId != null) {
-        final groupDef = def.groups[item.groupId];
-        if (groupDef != null) {
-          final children = groupDef.children.isNotEmpty
-              ? groupDef.children
-              : item.children;
-          for (final child in children) {
-            if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
-          }
-        }
-        return false;
-      }
-      for (final child in item.children) {
-        if (_hasAnyRenderableValue(child, def, scopeValues)) return true;
-      }
-      return false;
-  }
-}
 
 // =============================================================================
 // SectionEntry: Represents a section header or group instance header
@@ -325,8 +278,7 @@ List<PdfElement> _extractElementsFromLayout(
 
   for (final item in items) {
     if (item.visibilityCondition != null &&
-        !item.visibilityCondition!.evaluate(scopeValues) &&
-        !_hasAnyRenderableValue(item, def, scopeValues)) {
+        !item.visibilityCondition!.evaluate(scopeValues)) {
       continue;
     }
 
@@ -338,8 +290,7 @@ List<PdfElement> _extractElementsFromLayout(
       case LayoutRow():
         for (final child in item.children) {
           if (child.visibilityCondition != null &&
-              !child.visibilityCondition!.evaluate(scopeValues) &&
-              !_hasAnyRenderableValue(child, def, scopeValues)) {
+              !child.visibilityCondition!.evaluate(scopeValues)) {
             continue;
           }
           if (child is LayoutNodeRef) {
@@ -378,6 +329,10 @@ List<PdfElement> _extractElementsFromLayout(
 
       case LayoutGroup():
         flushFields();
+        // Add divider between asset subcategories for visual separation
+        if (blockId == 'block_asset_details' && elements.isNotEmpty) {
+          elements.add(PdfDivider());
+        }
         if (item.groupId != null) {
           elements.addAll(_renderGroupWithId(item, def, instance, renderedNodeIds, blockId: blockId));
         } else {
@@ -420,8 +375,7 @@ List<PdfElement> _extractGroupInstanceElements(
 
   for (final item in items) {
     if (item.visibilityCondition != null &&
-        !item.visibilityCondition!.evaluate(scopeValues) &&
-        !_hasAnyRenderableValue(item, def, scopeValues)) {
+        !item.visibilityCondition!.evaluate(scopeValues)) {
       continue;
     }
 
@@ -434,8 +388,7 @@ List<PdfElement> _extractGroupInstanceElements(
       case LayoutRow():
         for (final child in item.children) {
           if (child.visibilityCondition != null &&
-              !child.visibilityCondition!.evaluate(scopeValues) &&
-              !_hasAnyRenderableValue(child, def, scopeValues)) {
+              !child.visibilityCondition!.evaluate(scopeValues)) {
             continue;
           }
           if (child is LayoutNodeRef) {
