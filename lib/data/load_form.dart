@@ -696,7 +696,7 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'tax_returns_rrn': NodeGroupDefinition(
         id: 'tax_returns_rrn',
-        label: 'Tax returns – previous 2 years',
+        label: 'Tax Returns Previous 2 Years',
         repeatable: false,
         minInstances: 1,
         children: rrnChildren('tax_returns'),
@@ -1253,7 +1253,7 @@ Future<FormDefinition> loadFormDefinition() async {
               children: [
                 LayoutGroup(
                   id: 'tax_returns_rrn_group',
-                  label: 'Tax returns – previous 2 years',
+                  label: 'Tax Returns Previous 2 Years',
                   groupId: 'tax_returns_rrn',
                   children: const [],
                 ),

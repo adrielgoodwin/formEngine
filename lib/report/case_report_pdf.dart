@@ -110,7 +110,8 @@ class PdfSectionHeader extends PdfElement {
   final int level; // 1 = block, 2 = group/subsection
   final PdfColor? color; // Optional color for block headers
   final String? blockId; // Which block this header belongs to
-  PdfSectionHeader(this.title, {this.level = 1, this.color, this.blockId});
+  final bool isRrn; // Whether this is an RRN group header
+  PdfSectionHeader(this.title, {this.level = 1, this.color, this.blockId, this.isRrn = false});
 }
 
 class PdfBlockDivider extends PdfElement {}
@@ -293,7 +294,7 @@ List<PdfElement> _renderGroupWithId(
     final instances = instance.getGroupInstances(item.groupId!);
     if (instances.isNotEmpty) {
       if (item.label.isNotEmpty) {
-        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
+        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId, isRrn: true));
       }
       elements.addAll(_extractGroupInstanceElements(
         groupDef.children, def, instance, instances.first, renderedNodeIds,
@@ -496,7 +497,8 @@ List<PdfElement> _resolveGroupInInstance(
     final instances = instance.getGroupInstances(item.groupId!);
     if (instances.isNotEmpty) {
       if (item.label.isNotEmpty) {
-        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId));
+        final isRrn = !groupDef.repeatable;
+        elements.add(PdfSectionHeader(item.label, level: 2, blockId: blockId, isRrn: isRrn));
       }
       // Use the group definition's children (not the empty layout children)
       elements.addAll(_extractGroupInstanceElements(
@@ -533,8 +535,6 @@ String _pdfLabel(String originalLabel, String nodeId) {
   if (nodeId.endsWith('_notes') && originalLabel.length > 20) return 'Notes';
   // Simplify real estate ownership/tax history label
   if (nodeId == 'realestate_ownership_tax_history') return 'Ownership/tax history';
-  // Remove hyphen from Tax returns label to fix icon issue
-  if (nodeId == 'tax_returns_rrn') return 'Tax returns previous 2 years';
   return originalLabel;
 }
 
@@ -655,20 +655,19 @@ pw.Widget _renderPdfElement(PdfElement element) {
         );
       } else {
         // Level 2: Subsection headers (groups, repeatable instances)
-        // Documents block keeps bold black headers; Assets block keeps bold black headers EXCEPT for RRNs
+        // RRN headers are only bold/black in the Documents block
+        // Non-RRN asset subheadings (e.g. RRSPs, Real Estate) are bold/black
         final isDocuments = element.blockId == 'block_documents';
         final isAssets = element.blockId == 'block_asset_details';
-        final isRrn = element.title.toLowerCase().contains('rrn') || 
-                     element.title.toLowerCase().contains('requested/received');
-        final isBoldBlock = isDocuments || (isAssets && !isRrn);
+        final isBold = (isDocuments) || (isAssets && !element.isRrn);
         return pw.Container(
           margin: const pw.EdgeInsets.only(top: 3, bottom: 1),
           child: pw.Text(
             element.title,
             style: pw.TextStyle(
-              fontSize: isBoldBlock ? 9 : 8,
-              fontWeight: isBoldBlock ? pw.FontWeight.bold : pw.FontWeight.normal,
-              color: isBoldBlock ? PdfColors.black : PdfColors.grey700,
+              fontSize: isBold ? 9 : 8,
+              fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: isBold ? PdfColors.black : PdfColors.grey700,
             ),
           ),
         );
