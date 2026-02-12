@@ -924,12 +924,12 @@ Future<FormDefinition> loadFormDefinition() async {
                   LayoutNodeRef(
                     id: 'realestate_principal_year_ref',
                     nodeId: 'realestate_principal_year',
-                    widthFraction: 0.5,
+                    widthFraction: 0.2,
                   ),
                   LayoutNodeRef(
                     id: 'realestate_principal_value_ref',
                     nodeId: 'realestate_principal_value',
-                    widthFraction: 0.5,
+                    widthFraction: 0.8,
                   ),
                 ],
               ),
@@ -976,12 +976,12 @@ Future<FormDefinition> loadFormDefinition() async {
                   LayoutNodeRef(
                     id: 'realestate_other_year_ref',
                     nodeId: 'realestate_other_year_of_purchase',
-                    widthFraction: 0.3,
+                    widthFraction: 0.2,
                   ),
                   LayoutNodeRef(
                     id: 'realestate_other_purchase_price_ref',
                     nodeId: 'realestate_other_purchase_price',
-                    widthFraction: 0.35,
+                    widthFraction: 0.4,
                   ),
                   LayoutNodeRef(
                     id: 'realestate_other_value_ref',
@@ -1671,7 +1671,7 @@ Future<FormDefinition> loadFormDefinition() async {
       'realestate_principal_year': DataSpec(
         formNodeID: 'realestate_principal_year',
         valueKind: ValueKind.number,
-        profile: ValueProfile.plainText,
+        profile: ValueProfile.yearYyyy,
       ),
       'realestate_principal_value': DataSpec(
         formNodeID: 'realestate_principal_value',
