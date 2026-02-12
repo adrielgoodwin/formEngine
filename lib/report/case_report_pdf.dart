@@ -785,6 +785,12 @@ String? _formatTextValue(Object? value, ValueProfile profile) {
       }
       return value.toString();
 
+    case ValueProfile.yearYyyy:
+      if (value is int) return value.toString();
+      final s = value.toString().trim();
+      final m = RegExp(r'(\d{4})$').firstMatch(s);
+      return m?.group(1);
+
     case ValueProfile.dateDdMmYyyy:
       return _formatDateWithMonth(value.toString());
 

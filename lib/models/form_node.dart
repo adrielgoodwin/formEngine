@@ -113,6 +113,7 @@ enum ValueKind {
 enum ValueProfile {
   plainText,
   dateDdMmYyyy,
+  yearYyyy,
   moneyCents,
   sinCanada,
   phoneNorthAmerica,
@@ -143,11 +144,22 @@ class DateFormatting extends FieldFormatting {
   TextInputType keyboardType() => TextInputType.datetime;
 }
 
+class YearFormatting extends FieldFormatting {
+  const YearFormatting();
+  @override
+  List<TextInputFormatter> formatters() => [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(4),
+      ];
+  @override
+  TextInputType keyboardType() => const TextInputType.numberWithOptions();
+}
+
 class MoneyFormatting extends FieldFormatting {
   const MoneyFormatting();
   @override
   List<TextInputFormatter> formatters() => [
-        FilteringTextInputFormatter.allow(RegExp(r'[\d\-]')),
+        FilteringTextInputFormatter.allow(RegExp(r'[\d\.\-]')),
         const MoneyCentsFormatter(),
       ];
   @override
@@ -259,6 +271,7 @@ FieldFormatting formattingFor(ValueProfile profile) {
   return switch (profile) {
     ValueProfile.plainText => const PlainTextFormatting(),
     ValueProfile.dateDdMmYyyy => const DateFormatting(),
+    ValueProfile.yearYyyy => const YearFormatting(),
     ValueProfile.moneyCents => const MoneyFormatting(),
     ValueProfile.sinCanada => const SinFormatting(),
     ValueProfile.phoneNorthAmerica => const PhoneFormatting(),
@@ -278,6 +291,7 @@ List<FieldValidator> effectiveValidatorsFor(DataSpec spec) {
 Object? parseCanonical(ValueProfile profile, String text) {
   return switch (profile) {
     ValueProfile.moneyCents => _parseMoneyValue(text),
+    ValueProfile.yearYyyy => _parseYearValue(text),
     ValueProfile.sinCanada => () {
       final digits = text.replaceAll(RegExp(r'\D'), '');
       return digits.isEmpty ? null : digits;
@@ -291,13 +305,44 @@ Object? parseCanonical(ValueProfile profile, String text) {
   };
 }
 
-/// Parses money text to cents, supporting negative values.
+int? _parseYearValue(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return null;
+
+  // Accept legacy dd/mm/yyyy by extracting the last 4 digits.
+  final m = RegExp(r'(\d{4})$').firstMatch(trimmed);
+  if (m == null) return null;
+
+  final year = int.tryParse(m.group(1)!);
+  if (year == null) return null;
+  if (year < 1000 || year > 9999) return null;
+  return year;
+}
+
+
+/// Parses money text to cents, supporting both dollars and cents entry.
+/// If user typed a decimal point, parse as dollars.cents. Otherwise treat as dollars.
 int? _parseMoneyValue(String text) {
   final isNegative = text.contains('-');
-  final digits = text.replaceAll(RegExp(r'[^\d]'), '');
-  if (digits.isEmpty) return null;
-  final value = int.tryParse(digits);
-  if (value == null) return null;
+  final cleanText = text.replaceAll(RegExp(r'[^\d\.-]'), '');
+  if (cleanText.isEmpty || cleanText == '-') return null;
+  
+  final hasUserEnteredDecimal = cleanText.contains('.');
+  int value;
+  
+  if (hasUserEnteredDecimal) {
+    // User typed decimal - parse as dollars.cents
+    final parts = cleanText.split('.');
+    final dollars = int.tryParse(parts[0]) ?? 0;
+    final centsPart = parts.length > 1 ? parts[1].padRight(2, '0').substring(0, 2) : '00';
+    final centsValue = int.tryParse(centsPart) ?? 0;
+    value = dollars * 100 + centsValue;
+  } else {
+    // User didn't type decimal - treat as dollars, convert to cents
+    final dollars = int.tryParse(cleanText) ?? 0;
+    value = dollars * 100;
+  }
+  
   return isNegative ? -value : value;
 }
 

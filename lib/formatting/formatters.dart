@@ -35,68 +35,65 @@ class MoneyCentsFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final text = newValue.text;
-    final isDeleting = newValue.text.length < oldValue.text.length;
     final isNegative = text.startsWith('-');
-    final digits = text.replaceAll(RegExp(r'[^\d]'), '');
-
-    if (digits.isEmpty) {
-      if (isNegative) {
-        return const TextEditingValue(
-          text: '-',
-          selection: TextSelection.collapsed(offset: 1),
-        );
-      }
-      return const TextEditingValue(text: '');
+    
+    // Allow digits, decimal point, and negative sign
+    final cleanText = text.replaceAll(RegExp(r'[^\d\.-]'), '');
+    
+    // Handle empty input
+    if (cleanText.isEmpty || cleanText == '-') {
+      return TextEditingValue(
+        text: cleanText,
+        selection: TextSelection.collapsed(offset: cleanText.length),
+      );
     }
 
-    if (isDeleting && _allZeros(digits)) {
-      if (isNegative) {
-        return const TextEditingValue(
-          text: '-',
-          selection: TextSelection.collapsed(offset: 1),
-        );
-      }
-      return const TextEditingValue(text: '');
+    // Special handling for decimal point input
+    if (cleanText.endsWith('.')) {
+      // User just typed a decimal point, show it without formatting
+      final dollarsPart = cleanText.substring(0, cleanText.length - 1);
+      final dollars = int.tryParse(dollarsPart) ?? 0;
+      final dollarsStr = _groupThousands(dollars.toString());
+      return TextEditingValue(
+        text: isNegative ? '-$dollarsStr.' : '$dollarsStr.',
+        selection: TextSelection.collapsed(offset: (isNegative ? '-$dollarsStr.' : '$dollarsStr.').length),
+      );
     }
 
     // Parse the input differently based on whether user typed a decimal
-    final hasUserEnteredDecimal = text.contains('.');
-    int cents;
+    final hasUserEnteredDecimal = cleanText.contains('.');
     
     if (hasUserEnteredDecimal) {
-      // User typed decimal - treat as cents (original behavior)
-      cents = int.tryParse(digits) ?? 0;
+      // User typed decimal - handle cents input carefully
+      final parts = cleanText.split('.');
+      final dollars = int.tryParse(parts[0]) ?? 0;
+      final centsPart = parts.length > 1 ? parts[1] : '';
+      final dollarsStr = _groupThousands(dollars.toString());
+      
+      // Don't auto-pad cents - show exactly what user typed
+      if (centsPart.isEmpty) {
+        // User typed decimal but no cents yet
+        return TextEditingValue(
+          text: isNegative ? '-$dollarsStr.' : '$dollarsStr.',
+          selection: TextSelection.collapsed(offset: (isNegative ? '-$dollarsStr.' : '$dollarsStr.').length),
+        );
+      } else {
+        // User is typing cents - show them as-is (up to 2 digits)
+        final displayCents = centsPart.length > 2 ? centsPart.substring(0, 2) : centsPart;
+        return TextEditingValue(
+          text: isNegative ? '-$dollarsStr.$displayCents' : '$dollarsStr.$displayCents',
+          selection: TextSelection.collapsed(offset: (isNegative ? '-$dollarsStr.$displayCents' : '$dollarsStr.$displayCents').length),
+        );
+      }
     } else {
       // User didn't type decimal - treat as dollars
-      final dollars = int.tryParse(digits) ?? 0;
-      cents = dollars * 100;
+      final dollars = int.tryParse(cleanText) ?? 0;
+      final dollarsStr = _groupThousands(dollars.toString());
+      return TextEditingValue(
+        text: isNegative ? '-$dollarsStr' : dollarsStr,
+        selection: TextSelection.collapsed(offset: (isNegative ? '-$dollarsStr' : dollarsStr).length),
+      );
     }
-    
-    final dollars = cents ~/ 100;
-    final centPart = cents % 100;
-    final dollarsStr = _groupThousands(dollars.toString());
-    
-    // Only show decimal if user has entered cents or explicitly typed a decimal point
-    final showDecimal = hasUserEnteredDecimal && centPart > 0;
-    
-    String formattedText;
-    if (showDecimal) {
-      formattedText = isNegative ? '-$dollarsStr.${centPart.toString().padLeft(2, '0')}' : '$dollarsStr.${centPart.toString().padLeft(2, '0')}';
-    } else {
-      formattedText = isNegative ? '-$dollarsStr' : dollarsStr;
-    }
-
-    return TextEditingValue(
-      text: formattedText,
-      selection: TextSelection.collapsed(offset: formattedText.length),
-    );
-  }
-
-  bool _allZeros(String s) {
-    for (final ch in s.split('')) {
-      if (ch != '0') return false;
-    }
-    return true;
   }
 
   String _groupThousands(String s) {

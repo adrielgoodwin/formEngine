@@ -11,6 +11,41 @@ import '../models/form_node.dart';
 import '../models/group_instance.dart';
 import '../state/form_state.dart';
 
+/// Formats cents back to display text for UI (without $ sign).
+String? _formatMoneyForDisplay(int? cents) {
+  if (cents == null) return null;
+  
+  final isNegative = cents < 0;
+  final absValue = cents.abs();
+  final dollars = absValue ~/ 100;
+  final centsPart = absValue % 100;
+  final sign = isNegative ? '-' : '';
+  
+  // Only show decimal if there are actual cents
+  if (centsPart > 0) {
+    return '$sign${_formatWithCommas(dollars)}.${centsPart.toString().padLeft(2, '0')}';
+  } else {
+    return '$sign${_formatWithCommas(dollars)}';
+  }
+}
+
+/// Formats number with commas for thousands.
+String _formatWithCommas(int number) {
+  final s = number.toString();
+  final chars = s.split('');
+  final out = <String>[];
+  var count = 0;
+  for (var i = chars.length - 1; i >= 0; i--) {
+    out.add(chars[i]);
+    count++;
+    if (count == 3 && i != 0) {
+      out.add(',');
+      count = 0;
+    }
+  }
+  return out.reversed.join('');
+}
+
 /// Global state manager for block collapse states
 class BlockCollapseState with ChangeNotifier {
   final Map<String, bool> _collapsedStates = {};
@@ -871,18 +906,38 @@ Widget renderTextInput(
     (state) => state.errorFor(fieldKey)
   );
 
-  // Ensure initial text uses the same formatting as live input.
-  final initialText = controller.text;
-  if (initialText.isNotEmpty) {
-    var formattedValue = TextEditingValue(text: initialText);
-    for (final formatter in formatting.formatters()) {
-      formattedValue = formatter.formatEditUpdate(
-        const TextEditingValue(text: ''),
-        formattedValue,
-      );
+  // Format controller text only when it still reflects the stored value.
+  // This prevents us from rewriting what the user is currently typing during rebuilds.
+  final storedValue = (groupId != null && instanceId != null)
+      ? formState.formInstance?.getGroupValue<dynamic>(groupId, instanceId, node.id)
+      : formState.formInstance?.getValue<dynamic>(node.id);
+  final storedText = storedValue?.toString() ?? '';
+  final currentText = controller.text;
+
+  if (storedText.isNotEmpty && currentText == storedText) {
+    String displayText;
+    if (profile == ValueProfile.moneyCents) {
+      final cents = int.tryParse(storedText);
+      displayText = _formatMoneyForDisplay(cents) ?? storedText;
+    } else if (profile == ValueProfile.yearYyyy) {
+      final m = RegExp(r'(\d{4})$').firstMatch(storedText.trim());
+      displayText = m?.group(1) ?? storedText;
+    } else {
+      var formattedValue = TextEditingValue(text: storedText);
+      for (final formatter in formatting.formatters()) {
+        formattedValue = formatter.formatEditUpdate(
+          const TextEditingValue(text: ''),
+          formattedValue,
+        );
+      }
+      displayText = formattedValue.text;
     }
-    if (formattedValue.text != initialText) {
-      controller.value = formattedValue;
+
+    if (displayText != storedText) {
+      controller.value = TextEditingValue(
+        text: displayText,
+        selection: TextSelection.collapsed(offset: displayText.length),
+      );
     }
   }
 

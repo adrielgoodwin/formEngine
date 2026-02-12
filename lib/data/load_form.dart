@@ -1685,8 +1685,8 @@ Future<FormDefinition> loadFormDefinition() async {
       ),
       'realestate_other_year_of_purchase': DataSpec(
         formNodeID: 'realestate_other_year_of_purchase',
-        valueKind: ValueKind.date,
-        profile: ValueProfile.dateDdMmYyyy,
+        valueKind: ValueKind.number,
+        profile: ValueProfile.yearYyyy,
       ),
       'realestate_other_purchase_price': DataSpec(
         formNodeID: 'realestate_other_purchase_price',
